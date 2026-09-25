@@ -11,9 +11,18 @@ accounts, adverts, tracking or network requests.
 
 - **On a laptop or tablet:** download the repository and double-click `index.html`. It works offline,
   straight from disk.
-- **On the web:** in the GitHub repository go to **Settings → Pages → Build and deployment**, choose
-  **Deploy from a branch**, then pick this branch and the `/ (root)` folder. The wheel is then at
-  `https://<your-account>.github.io/Lucky-draw/`.
+- **On your website, with phone sign-ups:** see below.
+
+## Phone sign-ups on your website (themaap.co.uk)
+
+1. Upload `index.html` and `api.php` into a new folder on your website, e.g. `draw`, so they don't
+   replace your homepage. The server needs PHP (no database or anything else).
+2. In `api.php`, set `ADMIN_PASSWORD` on its first setting line (this repository keeps a placeholder).
+3. QR code for guests: `https://themaap.co.uk/draw/`. They get only the sign-up form.
+4. On your laptop open `https://themaap.co.uk/draw/#wheel` and log in with that password. New
+   sign-ups appear on the wheel within about 2 seconds; **Download Excel (.xlsx)** includes them.
+5. Sign-ups are stored in the `data` folder that `api.php` creates next to itself. **Settings →
+   Phone sign-ups → Clear all sign-ups on the server** (or deleting the folder) wipes them.
 
 The first visit opens a short **How it works** guide. You can reopen it any time with the **?**
 button. To try the wheel straight away, press **Load 12 demo entries**. These are fictional people
@@ -136,14 +145,14 @@ Round 1 again. The **Demo entries** button asks first if real people are already
 
 ## Limits
 
-The guest sign-up syncs live only between windows of the **same browser on the same device**. A
-plain HTML file can't receive entries from guests' own phones. Live QR-code entry across devices, as
-RepBud offers, would need a small backend: a hosted sign-up form plus a database or API that the
-wheel reads.
+Opened straight from disk (or hosted without `api.php`), guest sign-up syncs only between windows
+of the same browser on the same device. Entries from guests' own phones need `api.php` on your
+website (see above).
 
 ## Files
 
 - `index.html`: the whole app (HTML, CSS and JavaScript in one file).
+- `api.php`: receives guests' phone sign-ups on your website and passes them to the wheel.
 - `assets/map-logo.svg`, `assets/map-mark.svg`: the MAP lockup and M mark as vector files, traced
   from the brand artwork.
 - `assets/brand/`: the original brand sheet and logo.

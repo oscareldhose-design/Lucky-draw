@@ -3,8 +3,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: blob:; media-src data: blob:; font-src data:; connect-src 'none'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: blob:; media-src data: blob:; font-src data:; connect-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
 <title>MAP Lucky Draw</title>
+<script>
+/* Served from a web server, this page may be a guest's sign-up screen (SPEC 2.15): keep everything hidden behind a
+   brand splash until init() has asked api.php, so a guest's phone never flashes the wheel. file:// is unaffected. */
+(function () { var p = location.protocol; if (p === 'http:' || p === 'https:') document.documentElement.setAttribute('data-app', 'pending'); })();
+</script>
 <meta name="description" content="MAP Lucky Draw: a prize wheel for events and stands. Your way home.">
 <meta name="theme-color" content="#6e006e">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%20294%20309'%3E%3Cpath%20fill='%236e006e'%20d='M0.13%2070.25%20121.25%201.43%20122.25%202.01%20122.25%2068.7%2059.56%20104.68%2059.56%20105.68%200.13%2071.25ZM180.69%2037.14%20243.13%200.35%20244.13%200.93%20244.13%2057.31%20180.69%2093.78%20179.69%2094.36%20179.69%2037.14Z'/%3E%3Cpath%20fill='%23a308a3'%20d='M0.13%2070.25%2059.56%20104.68%2059.56%20269.27%200.13%20308.89ZM121.25%201.43%20180.69%2035.85%20180.69%20190.04%20121.25%20229.66ZM243.13%200.35%20292.87%2029.15%20292.87%20117.43%20243.13%20149.52Z'/%3E%3C/svg%3E">
@@ -14,6 +19,7 @@
    1. Tokens (light / dark)   2. Base   3. Header   4. Layout
    5. Wheel stage             6. Panel, tabs, forms, lists
    7. Dialogs & toasts        8. Guest sign-up (kiosk)   9. Event mode
+   10. Phone sign-ups on the organiser's web server (api.php): splash, guest phone, log-in, status pill
    ===================================================================== */
 
 /* ---------- 1. Tokens ---------- */
@@ -697,6 +703,56 @@ body.event-mode .toasts { top: 16px; left: 16px; right: auto; bottom: auto; tran
   body.event-mode .wheel-box { width: min(calc(100vh - 2 * clamp(16px, 3vh, 36px)), 58vw); width: min(calc(100dvh - 2 * clamp(16px, 3vh, 36px)), 58vw); }
 }
 
+/* ---------- 10. Phone sign-ups on the organiser's web server (api.php, SPEC 2.15) ---------- */
+/* While init() asks api.php (http/https only) nothing but a brand splash shows. */
+.boot { display: none; }
+html[data-app="pending"] .app, html[data-app="pending"] .signup { display: none !important; }
+html[data-app="pending"] .boot { display: grid; place-items: center; position: fixed; inset: 0; background: linear-gradient(160deg, var(--brand-600), var(--brand-800) 62%, var(--brand-950)); }
+.boot svg { width: 84px; height: auto; filter: brightness(0) invert(1); animation: bootPulse 1.2s ease-in-out infinite alternate; }
+@keyframes bootPulse { from { opacity: .45; } to { opacity: 1; } }
+/* Guest mode (a guest's own phone): only the sign-up screen, in the normal page flow. The log-in screen hides the app. */
+html[data-app="guest"] .app, html[data-app="login"] .app, html[data-app="guest"] .su-exit { display: none !important; }
+html[data-app="guest"] #signup { position: static; min-height: 100vh; min-height: 100dvh; overflow: visible; }
+.su-submit[aria-busy="true"] { cursor: progress; }
+.su-submit:disabled { opacity: .8; cursor: progress; }
+.su-state { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 18px; padding: 24px 0; }
+.su-state-icon { width: 112px; height: 112px; border-radius: 50%; display: grid; place-items: center; background: color-mix(in srgb, var(--brand-600) 12%, var(--surface)); border: 2px solid color-mix(in srgb, var(--brand-600) 40%, transparent); }
+.su-state-icon .ic { width: 52px; height: 52px; color: var(--accent-ink); stroke-width: 2; }
+.su-card .su-state h2 { font-size: clamp(30px, 4.2vw, 48px); }
+.su-formerr[data-kind="info"] { background: color-mix(in srgb, var(--brand-600) 9%, var(--surface)); color: var(--text); border: 2px solid color-mix(in srgb, var(--brand-600) 30%, transparent); }
+.login .li-note { font-size: 14px; color: var(--text-2); text-align: center; }
+@media (max-width: 900px), (max-aspect-ratio: 1/1) {
+  html[data-app="guest"] .su-brand, .login .su-brand { padding-top: 28px; } /* no Exit button above the brand band here */
+}
+@media (max-width: 560px) {
+  html[data-app="guest"] .su-brand, .login .su-brand { padding-top: 20px; }
+}
+@media (max-width: 340px) {
+  html[data-app="guest"] .su-title { font-size: 28px; }
+  html[data-app="guest"] .su-notice { font-size: 15px; padding: 10px 12px; }
+  html[data-app="guest"] .check { padding: 10px; }
+}
+/* Organiser: status pill (header on wide screens, panel on phones), warning banner, Settings → Phone sign-ups */
+.sync-pill { display: inline-flex; align-items: center; gap: 8px; height: 48px; padding: 0 16px; border-radius: 999px; border: 1.5px solid var(--line-strong); background: var(--surface); color: var(--text); font-size: 14px; white-space: nowrap; touch-action: manipulation; }
+.sync-pill:hover { border-color: var(--accent-ink); }
+.sync-pill .sp-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--text-2); flex: none; }
+.sync-pill[data-state="live"] .sp-dot { background: var(--brand-600); box-shadow: 0 0 0 4px color-mix(in srgb, var(--brand-600) 24%, transparent); }
+.sync-pill[data-state="connecting"] .sp-dot, .sync-pill[data-state="reconnecting"] .sp-dot { background: var(--brand-500); animation: bootPulse .8s ease-in-out infinite alternate; }
+.sync-pill[data-state="reconnecting"] { border-style: dashed; }
+.sync-pill[data-state="loggedout"] { border-color: var(--danger); color: var(--danger); }
+.sync-pill[data-state="loggedout"] .sp-dot { background: var(--danger); }
+.panel-top .sync-pill { display: none; height: 40px; padding: 0 12px; font-size: 13px; }
+.srv-banner { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 6px 10px; padding: 10px 16px; background: color-mix(in srgb, var(--brand-600) 10%, var(--surface)); color: var(--text); font-weight: 700; font-size: 15px; text-align: center; border-bottom: 1px solid var(--line); }
+.srv-banner .ic { width: 20px; height: 20px; flex: none; color: var(--accent-ink); }
+body.event-mode .srv-banner { display: none; }
+.copy-row { display: flex; gap: 8px; align-items: stretch; flex-wrap: wrap; }
+.copy-row .input { flex: 1 1 220px; min-width: 0; font-size: 15px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; background: var(--surface-2); }
+.copy-row .btn { min-height: 52px; }
+.ps-status { font-size: 14px; color: var(--text); background: var(--surface-2); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; }
+.ps-status[data-state="reconnecting"], .ps-status[data-state="loggedout"] { color: var(--danger); background: var(--danger-bg); border-color: transparent; font-weight: 700; }
+@media (max-width: 760px) { .app-header .sync-pill { width: 48px; padding: 0; justify-content: center; } .app-header .sync-pill .sp-text { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; } }
+@media (max-width: 560px) { .app-header .sync-pill { display: none; } .panel-top .sync-pill:not([hidden]) { display: inline-flex; } }
+
 /* ---------- Responsive tweaks ---------- */
 @media (max-width: 1023.98px) {
   .stage-head { display: flex; }
@@ -775,9 +831,11 @@ body.event-mode .toasts { top: 16px; left: 16px; right: auto; bottom: auto; tran
   <symbol id="i-eye" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></symbol>
   <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
   <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16.5v-5M12 7.5h.01"/></symbol>
+  <symbol id="i-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></symbol>
 </svg>
 
 <a class="skip-link" href="#spinBtn">Skip to the SPIN button</a>
+<div class="boot" aria-hidden="true"><svg viewBox="0 0 294 309" focusable="false"><use href="#map-mark" width="294" height="309"/></svg></div>
 
 <div class="app" id="app">
   <header class="app-header">
@@ -790,6 +848,7 @@ body.event-mode .toasts { top: 16px; left: 16px; right: auto; bottom: auto; tran
       </div>
     </div>
     <nav class="header-actions" aria-label="Display and mode controls">
+      <button type="button" class="sync-pill" data-state="connecting" hidden><span class="sp-dot" aria-hidden="true"></span><span class="sp-text">Phone sign-ups: connecting…</span></button>
       <button type="button" class="hbtn" id="btnSignup" title="Open the guest sign-up screen in a new window"><svg class="ic" aria-hidden="true"><use href="#i-user-plus"/></svg><span class="hbtn-label">Guest sign-up</span></button>
       <button type="button" class="hbtn hbtn-primary" id="btnEvent" aria-keyshortcuts="F" title="Event mode: full screen, screen kept awake (F)"><svg class="ic" aria-hidden="true"><use href="#i-maximize"/></svg><span class="hbtn-label">Event mode</span></button>
       <button type="button" class="hbtn icon-only" id="btnSound" aria-pressed="true" aria-label="Sound" title="Sound on/off"><svg class="ic ic-vol" aria-hidden="true"><use href="#i-volume"/></svg><svg class="ic ic-mute" aria-hidden="true"><use href="#i-mute"/></svg></button>
@@ -797,6 +856,7 @@ body.event-mode .toasts { top: 16px; left: 16px; right: auto; bottom: auto; tran
       <button type="button" class="hbtn icon-only" id="btnHelp" aria-label="How it works" title="How it works"><svg class="ic" aria-hidden="true"><use href="#i-help"/></svg></button>
     </nav>
   </header>
+  <p class="srv-banner" id="srvBanner" role="status" hidden><svg class="ic" aria-hidden="true"><use href="#i-info"/></svg><span id="srvBannerText"></span></p>
 
   <main class="app-main" id="main">
     <section class="stage" id="stage" aria-labelledby="stageTitle">
@@ -846,6 +906,7 @@ body.event-mode .toasts { top: 16px; left: 16px; right: auto; bottom: auto; tran
     <aside class="panel" id="panel" aria-label="Entries, winners and settings">
       <div class="panel-top">
         <p class="panel-counts" id="panelCounts">0 on the wheel · 0 winners</p>
+        <button type="button" class="sync-pill" data-state="connecting" hidden><span class="sp-dot" aria-hidden="true"></span><span class="sp-text">Phone sign-ups: connecting…</span></button>
         <button type="button" class="btn btn-secondary btn-excel" data-action="xlsx"><svg class="ic ic-sm" aria-hidden="true"><use href="#i-sheet"/></svg>Download Excel (.xlsx)</button>
       </div>
       <div class="tabs" role="tablist" aria-label="Panel sections">
@@ -958,6 +1019,21 @@ body.event-mode .toasts { top: 16px; left: 16px; right: auto; bottom: auto; tran
 
       <!-- Settings -->
       <section class="tabpanel" role="tabpanel" id="panel-settings" aria-labelledby="tab-settings" tabindex="0" hidden>
+        <fieldset class="set-group" id="phoneSet" hidden>
+          <legend>Phone sign-ups</legend>
+          <p class="ps-status" id="psStatus"></p>
+          <div class="field">
+            <label for="psAddr">Sign-up address for guests’ phones</label>
+            <div class="copy-row"><input class="input" id="psAddr" type="text" readonly aria-describedby="psAddrHelp"><button type="button" class="btn btn-secondary" id="psCopy"><svg class="ic ic-sm" aria-hidden="true"><use href="#i-copy"/></svg>Copy</button></div>
+            <p class="card-note" id="psAddrHelp">Make your QR code from this address. Guests who open it see only the sign-up form, and their entries appear here within a few seconds.</p>
+          </div>
+          <label class="switch-row" for="psOpen"><span class="sw-text">Sign-ups open<small>Turn off to stop new phone sign-ups. Guests then see “Entries are now closed.”</small></span><input class="switch" id="psOpen" type="checkbox" role="switch" checked></label>
+          <div class="btn-row">
+            <button type="button" class="btn btn-secondary" id="psResync"><svg class="ic ic-sm" aria-hidden="true"><use href="#i-undo"/></svg>Re-sync all</button>
+            <button type="button" class="btn btn-ghost" id="psLogout"><svg class="ic ic-sm" aria-hidden="true"><use href="#i-lock"/></svg>Log out</button>
+          </div>
+          <div class="btn-row"><button type="button" class="btn btn-danger" id="psClear"><svg class="ic ic-sm" aria-hidden="true"><use href="#i-trash"/></svg>Clear all sign-ups on the server</button></div>
+        </fieldset>
         <fieldset class="set-group">
           <legend>Draw</legend>
           <div class="field"><label for="sTitle">Draw title</label><input class="input" id="sTitle" type="text" maxlength="60" data-setting="title"></div>
@@ -1025,7 +1101,7 @@ body.event-mode .toasts { top: 16px; left: 16px; right: auto; bottom: auto; tran
         </fieldset>
         <fieldset class="set-group">
           <legend>Data</legend>
-          <p class="note">Everything is stored only in this browser on this device. Export before you clear it.</p>
+          <p class="note" id="dataNote">Everything is stored only in this browser on this device. Export before you clear it.</p>
           <div class="btn-row">
             <button type="button" class="btn btn-ghost" data-action="reset-round" data-lock><svg class="ic ic-sm" aria-hidden="true"><use href="#i-undo"/></svg>Reset round counter</button>
             <button type="button" class="btn btn-danger" data-action="delete-all" data-lock><svg class="ic ic-sm" aria-hidden="true"><use href="#i-trash"/></svg>Delete ALL data</button>
@@ -1037,7 +1113,7 @@ body.event-mode .toasts { top: 16px; left: 16px; right: auto; bottom: auto; tran
 
   <footer class="app-footer">
     <span class="ft-brand">MAP · Your way home</span>
-    <span>Entries are stored in this browser only.</span>
+    <span id="footStore">Entries are stored in this browser only.</span>
     <span class="storage-warn" id="storageWarn" hidden>Storage is unavailable — data will be lost when this page closes. Export regularly.</span>
   </footer>
 </div>
@@ -1084,7 +1160,7 @@ body.event-mode .toasts { top: 16px; left: 16px; right: auto; bottom: auto; tran
         <p class="err" id="suConsentErr" hidden></p>
         <label class="check" for="suMarketing" id="suMarketingRow"><input type="checkbox" id="suMarketing"><span><span id="suMarketingText">Keep me updated with news and offers from MAP.</span> <span class="opt-tag">(optional)</span></span></label>
         <button type="submit" class="btn btn-primary btn-block su-submit">Enter the draw</button>
-        <p class="su-fine">Your details stay on this device and are only used as described above.</p>
+        <p class="su-fine" id="suFine">Your details stay on this device and are only used as described above.</p>
       </form>
       <div class="su-success" id="suSuccess" hidden role="status" aria-live="polite">
         <div class="su-tick" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></div>
@@ -1092,6 +1168,41 @@ body.event-mode .toasts { top: 16px; left: 16px; right: auto; bottom: auto; tran
         <p class="su-success-sub" id="suSuccessText">Thank you. You may now close this window.</p>
         <button type="button" class="btn btn-primary btn-lg" id="suClose" hidden>Close window</button>
       </div>
+      <div class="su-state" id="suState" hidden role="status" aria-live="polite">
+        <div class="su-state-icon" aria-hidden="true"><svg class="ic"><use href="#i-lock"/></svg></div>
+        <h2 id="suStateTitle" tabindex="-1">Entries are now closed.</h2>
+        <p class="su-success-sub" id="suStateText">Thank you for your interest.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Organiser log-in (the address + #wheel on a web server with api.php) -->
+<section class="signup login" id="login" hidden aria-labelledby="liHeading">
+  <div class="su-brand">
+    <svg class="su-watermark" viewBox="0 0 294 309" aria-hidden="true" focusable="false"><use href="#map-mark" width="294" height="309"/></svg>
+    <span class="logo-plate su-logo-stacked"><svg class="logo-lockup" viewBox="0 0 294 313" role="img" aria-label="MAP — Your way home"><use href="#map-lockup" width="294" height="313"/></svg></span>
+    <span class="logo-plate logo-h su-logo-h" role="img" aria-label="MAP — Your way home"><svg class="logo-h-mark" viewBox="0 0 294 309" aria-hidden="true" focusable="false"><use href="#map-mark" width="294" height="309"/></svg><svg class="logo-h-words" viewBox="67 218 228 96" aria-hidden="true" focusable="false"><use href="#map-lockup" width="294" height="313" clip-path="url(#map-words-clip)"/></svg></span>
+    <div class="su-brand-text">
+      <p class="su-kicker">Organiser</p>
+      <p class="su-title" id="liTitle">Lucky Draw</p>
+      <p class="su-sub">Phone sign-ups live</p>
+    </div>
+  </div>
+  <div class="su-main">
+    <div class="su-card">
+      <form class="su-form" id="liForm" novalidate>
+        <h2 id="liHeading" tabindex="-1">Log in to the wheel</h2>
+        <p class="su-lead">Enter the organiser password (the one set in api.php) to run the wheel with guests’ phone sign-ups.</p>
+        <p class="su-formerr" id="liMsg" role="alert" hidden></p>
+        <input class="sr-only" type="text" name="username" autocomplete="username" value="organiser" tabindex="-1" aria-hidden="true">
+        <div class="field">
+          <label for="liPassword">Password</label>
+          <input class="input" id="liPassword" name="password" type="password" autocomplete="current-password" autocapitalize="off" spellcheck="false" enterkeyhint="go" aria-describedby="liMsg" required>
+        </div>
+        <button type="submit" class="btn btn-primary btn-block su-submit" id="liSubmit">Log in</button>
+        <p class="li-note">Guests don’t need this: they use the same address without “#wheel”.</p>
+      </form>
     </div>
   </div>
 </section>
@@ -1177,7 +1288,7 @@ body.event-mode .toasts { top: 16px; left: 16px; right: auto; bottom: auto; tran
    Sections: 0 helpers · 1 state & storage · 2 random · 3 wheel render ·
    4 spin · 5 audio · 6 confetti · 7 winner dialog · 8 entries UI ·
    9 winners UI · 10 exports (CSV / XLSX) · 11 settings UI · 12 sign-up ·
-   13 event mode · 14 help & demo · 15 init & test hooks
+   13 event mode · 14 help & demo · 15 phone sign-ups (api.php) · 16 init & test hooks
    ===================================================================== */
 (() => {
 'use strict';
@@ -1267,6 +1378,14 @@ function cleanText(v) { return String(v == null ? '' : v).replace(LONE_SURROGATE
 /** One-line value: cleaned, runs of whitespace collapsed, trimmed. */
 function cleanLine(v) { return cleanText(v).replace(/\s+/g, ' ').trim(); }
 
+/* Where this page runs (SPEC 2.15 B), decided once by init():
+   'offline'   file://, or a web host without api.php: the app exactly as before (no network requests at all);
+   'organiser' the address + #wheel (or ?wheel) on a web server with api.php: log in, then the app + live phone sign-ups;
+   'guest'     any other address on that server (a guest's own phone, from the QR code): only the sign-up form. */
+const IS_HTTP = location.protocol === 'http:' || location.protocol === 'https:';
+const WANT_WHEEL = location.hash.toLowerCase() === '#wheel' || new URLSearchParams(location.search).has('wheel');
+let appMode = 'offline';
+
 /* ---------------------------------------------------------------------
    1. State & storage (localStorage + BroadcastChannel, merge by record)
    --------------------------------------------------------------------- */
@@ -1284,8 +1403,9 @@ const DEFAULTS = Object.freeze({
   consentText: DEFAULT_CONSENT, showMarketing: true, marketingText: DEFAULT_MARKETING, pin: ''
 });
 const STATUSES = ['active', 'won', 'removed'];
-const SOURCES = ['manual', 'signup', 'import', 'demo'];
-const SOURCE_LABEL = { manual: 'Manual', signup: 'Sign-up', import: 'Import', demo: 'Demo' };
+// "phone": signed up on their own phone through api.php on the organiser's web server (SPEC 2.15).
+const SOURCES = ['manual', 'signup', 'import', 'demo', 'phone'];
+const SOURCE_LABEL = { manual: 'Manual', signup: 'Sign-up', import: 'Import', demo: 'Demo', phone: 'Phone' };
 const STATUS_LABEL = { active: 'On wheel', won: 'Winner', removed: 'Removed' };
 
 let lastStamp = 0;
@@ -1582,8 +1702,9 @@ function dupIndex() {
   }
   return { phones, emails };
 }
-/** Strict validation used by the add form, row edit and guest sign-up. Name, phone number and email are all required. */
-function validateFields(f, { excludeId } = {}) {
+/** Strict validation used by the add form, row edit and guest sign-up. Name, phone number and email are all required.
+    noDup: a guest's own phone checks duplicates on the server instead (this browser holds nobody else's entries). */
+function validateFields(f, { excludeId, noDup = false } = {}) {
   const errors = {};
   const name = cleanLine(f.name);
   const number = cleanLine(f.number);
@@ -1600,7 +1721,7 @@ function validateFields(f, { excludeId } = {}) {
     if (!/^\d+$/.test(w) || +w < 1 || +w > 100) errors.weight = 'Tickets must be a whole number from 1 to 100.';
     else weight = +w;
   }
-  if (!errors.number && !errors.email && S().blockDuplicates) {
+  if (!errors.number && !errors.email && S().blockDuplicates && !noDup) {
     const dup = findDuplicate(number, email, excludeId);
     if (dup === 'number') errors.number = 'This phone number is already entered.';
     if (dup === 'email') errors.email = 'This email address is already entered.';
@@ -2502,6 +2623,11 @@ function askConfirm({ title, text = '', ok = 'OK', cancel = 'Cancel', danger = f
     const field = $('#cdField'), inp = $('#cdInput');
     field.hidden = !input;
     inp.value = '';
+    // Defaults suit the PIN prompt; a typed confirmation (e.g. "DELETE") passes its own input settings.
+    inp.type = (input && input.type) || 'password';
+    inp.inputMode = (input && input.inputMode) || 'numeric';
+    inp.maxLength = (input && input.maxLength) || 8;
+    inp.setAttribute('autocapitalize', (input && input.autocapitalize) || 'off');
     showFieldError(inp, $('#cdErr'), '');
     if (input) $('#cdLabel').textContent = input.label;
     try { confirmDialog.showModal(); } catch (e) { confirmDialog.setAttribute('open', ''); }
@@ -3119,6 +3245,7 @@ function setSetting(key, value, { quiet = false } = {}) {
   if (S()[key] === value) return;
   state.settings = { ...S(), [key]: value, updatedAt: stamp() };
   if (quiet) { renderAll(); persistSoon(); } else commit();
+  if (SERVER_TEXT_KEYS.includes(key)) pushTextsSoon(); // the guests' phones show these (organiser on the server only)
 }
 function bindSettings() {
   for (const inp of $$('[data-setting]')) {
@@ -3233,6 +3360,7 @@ function resetSignupForm() {
   showFieldError($('#suConsent'), $('#suConsentErr'), '');
   $('#suFormErr').hidden = true;
   $('#suSuccess').hidden = true;
+  $('#suState').hidden = true;
   suForm.hidden = false;
 }
 function openSignup() {
@@ -3295,6 +3423,7 @@ async function requestSignupExit() {
   }
 }
 function syncHash() {
+  if (appMode === 'guest') return; // a guest's own phone has no operator view to go back to
   const want = location.hash === '#signup';
   if (want && !signupOpen) openSignup();
   else if (!want && signupOpen) { setSignupHash(); requestSignupExit(); }
@@ -3305,6 +3434,7 @@ window.addEventListener('hashchange', syncHash);
  * closes the wheel. If pop-ups are blocked (or this is a sandboxed preview) it opens over the wheel instead.
  */
 function openGuestSignup() {
+  if (appMode === 'organiser') return openServerSignup(); // the guests' own sign-up address (their phones use it too)
   // An opaque-origin frame is a sandboxed preview: pop-ups are refused there, so don't even try (avoids console noise).
   let sandboxed = false;
   try { sandboxed = window.self !== window.top && String(window.origin) === 'null'; } catch (e) { sandboxed = true; }
@@ -3332,6 +3462,7 @@ suForm.addEventListener('keydown', ev => {
   order[i + 1].focus();
 });
 onFormSubmit(suForm, () => {
+  if (appMode === 'guest') return guestSubmit(); // a guest's own phone: sent to api.php
   const vals = { name: suFields.name.value, number: suFields.number.value, email: suFields.email.value };
   const res = validateFields(vals);
   let dupMsg = '';
@@ -3360,9 +3491,10 @@ onFormSubmit(suForm, () => {
 for (const inp of [...Object.values(suFields), $('#suConsent')]) {
   inp.addEventListener('input', () => {
     if (inp.getAttribute('aria-invalid') === 'true') showFieldError(inp, $('#' + inp.id + 'Err'), '');
-    // Kiosk hygiene: a half-filled form is cleared after 90 s of inactivity.
+    // Kiosk hygiene: a half-filled form is cleared after 90 s of inactivity (not on a guest's own phone: nobody else
+    // uses it, and clearing it would lose what they typed).
     clearTimeout(suIdleTimer);
-    suIdleTimer = setTimeout(() => { if (signupOpen && !suForm.hidden) resetSignupForm(); }, 90000);
+    if (appMode !== 'guest') suIdleTimer = setTimeout(() => { if (signupOpen && !suForm.hidden) resetSignupForm(); }, 90000);
   });
 }
 function showSignupSuccess(name) {
@@ -3652,7 +3784,624 @@ function renderAll() {
 }
 
 /* ---------------------------------------------------------------------
-   15. Input wiring, init & test hooks
+   15. Phone sign-ups through api.php on the organiser's own web server (SPEC 2.15)
+       Guests scan a QR code of this page's address and enter on their own phones (guest mode); the organiser
+       opens the same address + #wheel, logs in, and the sign-ups join the wheel within a few seconds.
+   --------------------------------------------------------------------- */
+const API_URL = IS_HTTP ? new URL('api.php', location.href).href : ''; // next to index.html
+const POLL_MS = 2000;          // organiser: look for new sign-ups every 2 s…
+const POLL_MAX_MS = 30000;     // …backing off to 30 s while the server can't be reached
+const PAGE_MAX = 1000;         // api.php returns at most this many sign-ups per request
+const SYNC_KEY = 'map-lucky-draw:phone-sync:v1';  // how far this browser has read the server's sign-ups
+const ENTERED_KEY = 'map-lucky-draw:entered:v1';  // a guest's phone remembers that it has entered
+const ENTERED_TTL = 12 * 3600e3;
+const ORGANISER_KEY = 'map-lucky-draw:organiser-session:v1'; // '1' once logged in here: only then ask api.php first
+/** Settings the organiser's laptop copies to api.php, because the guests' phones show them. */
+const SERVER_TEXT_KEYS = ['title', 'subtitle', 'consentText', 'marketingText', 'showMarketing'];
+const sleep = ms => new Promise(res => setTimeout(res, ms));
+
+/** One same-origin request to api.php. Never throws: resolves to { status, ok, data, code, network, notApi }. */
+async function api(action, { method = 'GET', body, query = null, admin = false, timeout = 10000 } = {}) {
+  const url = new URL(API_URL);
+  url.searchParams.set('action', action);
+  if (query) for (const [k, v] of Object.entries(query)) url.searchParams.set(k, String(v));
+  const headers = { Accept: 'application/json' };
+  if (body !== undefined) headers['Content-Type'] = 'application/json';
+  if (admin) headers['X-Requested-With'] = 'map-lucky-draw'; // api.php refuses organiser requests without it (CSRF guard)
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), timeout);
+  let status = 0, text = '';
+  try {
+    const res = await fetch(url.href, {
+      method, headers, body: body === undefined ? undefined : JSON.stringify(body),
+      credentials: 'same-origin', cache: 'no-store', signal: ctrl.signal
+    });
+    status = res.status;
+    text = await res.text();
+  } catch (e) {
+    return { status: 0, ok: false, network: true, data: null, code: '' };
+  } finally {
+    clearTimeout(timer);
+  }
+  let data = null;
+  try { data = JSON.parse(text); } catch (e) { data = null; }
+  // Anything but a JSON answer (a 404 page, PHP source served as plain text…) means api.php isn't running here.
+  if (!data || typeof data !== 'object' || typeof data.ok !== 'boolean') return { status, ok: false, notApi: true, data: null, code: '' };
+  return { status, ok: data.ok === true && status >= 200 && status < 300, data, code: typeof data.code === 'string' ? data.code : '' };
+}
+/** Is api.php running next to this page? A 404 or a non-JSON answer is final; a dropped connection is retried. */
+async function probeApi() {
+  for (let i = 0; ; i++) {
+    const r = await api('config', { timeout: 6000 });
+    if (!r.network) return r.notApi ? null : r;
+    if (i >= 2) return null;
+    await sleep(800 * (i + 1));
+  }
+}
+/** The public config (no personal data, no counts), with the app's defaults for anything missing. */
+function cleanPublicConfig(d) {
+  const src = d && typeof d === 'object' ? (d.config && typeof d.config === 'object' ? { ...d, ...d.config } : d) : {};
+  const text = (v, max, dflt) => (typeof v === 'string' && cleanLine(v) ? str(cleanText(v), max) : dflt);
+  return {
+    open: src.open !== false, full: src.full === true,
+    title: text(src.title, 60, DEFAULTS.title),
+    subtitle: typeof src.subtitle === 'string' ? str(cleanText(src.subtitle), 80) : DEFAULTS.subtitle,
+    consentText: text(src.consentText, 400, DEFAULT_CONSENT),
+    marketingText: text(src.marketingText, 200, DEFAULT_MARKETING),
+    showMarketing: src.showMarketing !== false
+  };
+}
+function focusTop(sel) {
+  window.scrollTo(0, 0);
+  signupEl.scrollTop = 0;
+  const el = $(sel);
+  if (el) el.focus({ preventScroll: true });
+}
+
+/* ---------- Guest mode: a guest's own phone ---------- */
+let guestCfg = cleanPublicConfig(null);
+let guestClient = null;    // { id, sig }: sending the same details again reuses the clientId, so nobody is filed twice
+let guestSending = false;
+let guestRecheck = 0;
+const GUEST_MSG = {
+  duplicate: 'This phone number or email has already been entered.',
+  rate: 'Too many attempts — please wait a minute and try again.',
+  network: 'We couldn’t send your entry. Please check your internet connection and try again.',
+  server: 'Sorry, something went wrong on our side. Please try again in a moment.',
+  other: 'Sorry, we couldn’t send your entry. Please check your details and try again.'
+};
+const GUEST_FIELD_MSG = {
+  name: 'Please check your name (up to 80 characters).',
+  number: 'Enter a valid phone number (7–15 digits; +, spaces, dashes and brackets are fine).',
+  email: 'Enter a valid email address, like name@example.com.'
+};
+const guestDir = () => location.pathname.replace(/[^/]*$/, ''); // "/draw/" for both /draw/ and /draw/index.html
+function rememberedEntry() {
+  try {
+    const r = JSON.parse(lsGet(ENTERED_KEY) || 'null');
+    if (r && r.dir === guestDir() && Date.now() - r.at < ENTERED_TTL) return { name: str(r.name, 80) };
+  } catch (e) { /* ignore */ }
+  return null;
+}
+function startGuest(probe) {
+  appMode = 'guest';
+  document.documentElement.setAttribute('data-app', 'guest');
+  signupOpen = true;       // no operator toasts or wheel shortcuts: there is no operator view behind this screen
+  signupStandalone = true;
+  guestCfg = cleanPublicConfig(probe && probe.data);
+  // Their own phone: the browser may fill in their details.
+  suFields.name.setAttribute('autocomplete', 'name');
+  suFields.number.setAttribute('autocomplete', 'tel');
+  suFields.email.setAttribute('autocomplete', 'email');
+  $('#suFine').textContent = 'Your details go only to the organiser of this draw and are used only as described above.';
+  document.title = 'Enter the draw · MAP Lucky Draw';
+  renderGuest();
+  signupEl.hidden = false;
+  const done = rememberedEntry();
+  if (done) showGuestDone(done.name, true);
+  else showGuestForm();
+}
+function renderGuest() {
+  const c = guestCfg;
+  for (const el of $$('#signup [data-bind="title"]')) el.textContent = c.title;
+  for (const el of $$('#signup [data-bind="subtitle"]')) el.textContent = c.subtitle;
+  $('#suConsentText').textContent = c.consentText;
+  $('#suMarketingText').textContent = c.marketingText;
+  $('#suMarketingRow').hidden = !c.showMarketing;
+  $('#suPrize').hidden = true;
+}
+/** The form, unless api.php says entries are closed or the draw is full. */
+function showGuestForm() {
+  clearTimeout(guestRecheck);
+  if (!guestCfg.open || guestCfg.full) { showGuestState(guestCfg.open ? 'full' : 'closed'); return; }
+  $('#suState').hidden = true;
+  $('#suSuccess').hidden = true;
+  suForm.hidden = false;
+  focusTop('#suHeading');
+}
+/** "Entries are now closed." / "Sorry, this draw is full." — re-checked every 20 s, so the form comes back by itself. */
+function showGuestState(kind) {
+  suForm.hidden = true;
+  $('#suSuccess').hidden = true;
+  $('#suStateTitle').textContent = kind === 'full' ? 'Sorry, this draw is full.' : 'Entries are now closed.';
+  $('#suStateText').textContent = 'Thank you for your interest.';
+  $('#suState').hidden = false;
+  focusTop('#suStateTitle');
+  clearTimeout(guestRecheck);
+  guestRecheck = setTimeout(async function recheck() {
+    const r = await api('config', { timeout: 8000 });
+    if (r.ok) { guestCfg = cleanPublicConfig(r.data); renderGuest(); }
+    if ($('#suState').hidden) return;
+    if (guestCfg.open && !guestCfg.full) showGuestForm();
+    else guestRecheck = setTimeout(recheck, 20000);
+  }, 20000);
+}
+/** The confirmation (no counts, no way back to a blank form, no Close button: the guest just closes the page). */
+function showGuestDone(name, already) {
+  clearTimeout(guestRecheck);
+  suForm.hidden = true;
+  $('#suState').hidden = true;
+  $('#suSuccessTitle').textContent = already ? 'You’re already entered into the raffle.' : 'You’re entered into the raffle!';
+  const fn = name ? firstName(name) : '';
+  $('#suSuccessText').replaceChildren(...(fn ? ['Thank you, ', h('strong', { dir: 'auto', text: fn }), '. You may now close this window.'] : ['Thank you. You may now close this window.']));
+  $('#suClose').hidden = true;
+  $('#suSuccess').hidden = false;
+  focusTop('#suSuccessTitle');
+}
+function guestFormError(msg) {
+  const fe = $('#suFormErr');
+  fe.textContent = msg;
+  fe.hidden = !msg;
+  if (msg) fe.scrollIntoView({ block: 'nearest' });
+}
+function setGuestSending(on) {
+  guestSending = on;
+  const b = $('#suForm button[type="submit"]');
+  b.disabled = on;
+  b.setAttribute('aria-busy', String(on));
+  b.textContent = on ? 'Sending…' : 'Enter the draw';
+}
+/** POST the entry. A dropped connection or a 5xx is retried up to 3 times with the same clientId (api.php answers a
+    repeat with the entry it already has), so a retry never enters anyone twice. */
+async function sendEntry(payload) {
+  let r = null;
+  for (let attempt = 0; attempt <= 3; attempt++) {
+    if (attempt) await sleep(700 * 2 ** (attempt - 1));
+    r = await api('submit', { method: 'POST', body: payload, timeout: 10000 });
+    if (!(r.network || r.notApi || r.status >= 500)) break;
+  }
+  return r;
+}
+async function guestSubmit() {
+  if (guestSending) return;
+  const res = validateFields({ name: suFields.name.value, number: suFields.number.value, email: suFields.email.value }, { noDup: true });
+  showFieldError(suFields.name, $('#suNameErr'), res.errors.name);
+  showFieldError(suFields.number, $('#suNumberErr'), res.errors.number);
+  showFieldError(suFields.email, $('#suEmailErr'), res.errors.email);
+  const consent = $('#suConsent').checked;
+  showFieldError($('#suConsent'), $('#suConsentErr'), consent ? '' : 'You must tick “I agree” to enter the draw.');
+  guestFormError('');
+  const bad = [['name', suFields.name], ['number', suFields.number], ['email', suFields.email]].find(([k]) => res.errors[k]);
+  if (bad) { bad[1].focus(); return; }
+  if (!consent) { $('#suConsent').focus(); return; }
+  const v = res.values;
+  const marketing = guestCfg.showMarketing && $('#suMarketing').checked;
+  const sig = JSON.stringify([v.name, v.number, v.email, marketing]);
+  if (!guestClient || guestClient.sig !== sig) guestClient = { id: uid(), sig };
+  setGuestSending(true);
+  const r = await sendEntry({ clientId: guestClient.id, name: v.name, number: v.number, email: v.email, consent: true, marketing });
+  setGuestSending(false);
+  if (r.ok) {
+    guestClient = null;
+    lsSet(ENTERED_KEY, JSON.stringify({ dir: guestDir(), name: firstName(v.name), at: Date.now() }));
+    showGuestDone(v.name, false);
+    return;
+  }
+  // Every error keeps what the guest typed.
+  const field = r.data && typeof r.data.field === 'string' ? (r.data.field === 'phone' ? 'number' : r.data.field) : '';
+  if (r.code === 'closed') { guestCfg.open = false; showGuestState('closed'); return; }
+  if (r.code === 'full') { guestCfg.full = true; showGuestState('full'); return; }
+  if (r.code === 'duplicate') {
+    if (suFields[field]) suFields[field].setAttribute('aria-invalid', 'true');
+    guestFormError(GUEST_MSG.duplicate);
+    return;
+  }
+  if (r.code === 'invalid' && field === 'consent') { showFieldError($('#suConsent'), $('#suConsentErr'), 'You must tick “I agree” to enter the draw.'); $('#suConsent').focus(); return; }
+  if (r.code === 'invalid' && suFields[field]) { showFieldError(suFields[field], $('#su' + field[0].toUpperCase() + field.slice(1) + 'Err'), GUEST_FIELD_MSG[field]); suFields[field].focus(); return; }
+  if (r.code === 'rate_limited' || r.status === 429) { guestFormError(GUEST_MSG.rate); return; }
+  if (r.network || r.notApi) { guestFormError(GUEST_MSG.network); return; }
+  guestFormError(r.status >= 500 ? GUEST_MSG.server : GUEST_MSG.other);
+}
+
+/* ---------- Organiser mode: log-in, then live sync ---------- */
+const sync = {
+  on: false, authed: false, busy: false, again: false, timer: 0, fails: 0, polls: 0, lastOk: 0,
+  epoch: null, since: 0, open: null, full: false, total: null, waiting: 0, fullWarned: false, cfg: null, reconciled: false
+};
+let localStarted = false;
+let loginBusy = false;
+let loginWait = 0;
+const loginEl = $('#login');
+/** The guests' sign-up address: this page without #wheel / ?wheel (the client makes the QR code from it). */
+const guestAddress = () => location.origin + location.pathname;
+
+async function startOrganiser(probe) {
+  appMode = 'organiser';
+  if (probe.ok) { sync.cfg = cleanPublicConfig(probe.data); sync.open = sync.cfg.open; sync.full = sync.cfg.full; }
+  // A laptop that has never logged in (or logged out) goes straight to the log-in screen; one that may still be
+  // logged in (or can't remember) asks api.php whether its session cookie is still valid.
+  if (storageProbe() && lsGet(ORGANISER_KEY) !== '1') { showLogin(); return; }
+  const r = await api('session', { admin: true });
+  if (r.ok) { enterOrganiserApp(); return; }
+  showLogin(r.network ? 'Couldn’t reach the server. Check your internet connection, then log in.' : '');
+}
+function setLoginMsg(msg, kind = 'error') {
+  const m = $('#liMsg');
+  m.textContent = msg;
+  m.hidden = !msg;
+  m.dataset.kind = kind;
+}
+function showLogin(msg = '', kind = 'error') {
+  document.documentElement.setAttribute('data-app', 'login');
+  $('#liTitle').textContent = localStarted ? (S().title || DEFAULTS.title) : (sync.cfg ? sync.cfg.title : DEFAULTS.title);
+  setLoginMsg(msg, kind);
+  loginEl.hidden = false;
+  $('#app').inert = true;
+  document.title = 'Log in · MAP Lucky Draw';
+  setTimeout(() => $('#liPassword').focus(), 0);
+}
+onFormSubmit($('#liForm'), async () => {
+  if (loginBusy) return;
+  const inp = $('#liPassword');
+  if (!inp.value) { setLoginMsg('Please enter the password.'); inp.focus(); return; }
+  loginBusy = true;
+  const btn = $('#liSubmit');
+  btn.disabled = true;
+  btn.textContent = 'Logging in…';
+  const r = await api('login', { method: 'POST', body: { password: inp.value }, admin: true });
+  loginBusy = false;
+  btn.disabled = false;
+  btn.textContent = 'Log in';
+  if (r.ok) { inp.value = ''; setLoginMsg(''); enterOrganiserApp(); return; }
+  setLoginMsg(r.code === 'password_not_set' ? 'Open api.php and set ADMIN_PASSWORD first.'
+    : r.code === 'locked' || r.status === 429 ? 'Too many wrong passwords. Please wait 15 minutes and try again.'
+    : r.code === 'bad_password' || r.status === 401 ? 'That password isn’t right. Please try again.'
+    : r.network || r.notApi ? 'Couldn’t reach the server. Check your internet connection and try again.'
+    : `Couldn’t log in (error ${r.status}). Please try again.`);
+  inp.select();
+  inp.focus();
+});
+function enterOrganiserApp() {
+  clearTimeout(loginWait);
+  sync.authed = true;
+  lsSet(ORGANISER_KEY, '1');
+  loginEl.hidden = true;
+  document.documentElement.setAttribute('data-app', 'organiser');
+  $('#app').inert = false;
+  document.title = 'MAP Lucky Draw';
+  $('#phoneSet').hidden = false;
+  $('#psAddr').value = guestAddress();
+  $('#footStore').textContent = 'Entries are stored in this browser; phone sign-ups also on your web server.';
+  $('#dataNote').textContent = 'Everything is stored in this browser on this device, and phone sign-ups also on your web server (see Phone sign-ups above). Export before you clear it.';
+  if (!localStarted) { localStarted = true; initLocal(); }
+  else { renderAll(); scheduleMeasure(); }
+  startSync();
+}
+/** 401 from api.php: back to the log-in screen, but never over a draw in progress (it waits for the winner card). */
+function requireLogin() {
+  stopSync();
+  sync.authed = false;
+  lsSet(ORGANISER_KEY, '0');
+  sync.reconciled = false;
+  updatePill();
+  clearTimeout(loginWait);
+  if (isLocked()) { loginWait = setTimeout(requireLogin, 1000); return; }
+  if (confirmState) endConfirm(null);
+  closeHelp();
+  if (eventMode) exitEvent();
+  showLogin('You’ve been logged out. Please log in again.', 'info');
+}
+
+function loadCursor() {
+  try {
+    const c = JSON.parse(lsGet(SYNC_KEY) || 'null');
+    if (c && c.epoch != null && Number.isFinite(c.since)) { sync.epoch = String(c.epoch); sync.since = Math.max(0, c.since); }
+  } catch (e) { /* ignore */ }
+}
+function saveCursor() { lsSet(SYNC_KEY, JSON.stringify({ epoch: sync.epoch, since: sync.since })); }
+function startSync() {
+  if (sync.on) return;
+  sync.on = true;
+  sync.fails = 0;
+  sync.lastOk = 0;
+  if (sync.epoch === null) loadCursor();
+  updatePill();
+  refreshConfig();
+  pollNow();
+}
+function stopSync() { sync.on = false; clearTimeout(sync.timer); }
+function schedulePoll(ms) { clearTimeout(sync.timer); if (sync.on) sync.timer = setTimeout(() => pollPhone(), ms); }
+/** Check straight away (focus, visibility); a check already under way just runs again when it ends. */
+function pollNow() { if (!sync.on) return; if (sync.busy) { sync.again = true; return; } pollPhone(); }
+/** Local id of a phone sign-up: the same server entry always maps to the same id (reloads and re-syncs never
+    duplicate it), and a cleared server (new epoch) can never reuse an old one. */
+function phoneEntryId(epoch, entryId) {
+  const s = `${epoch}|${entryId}`;
+  let h1 = 0xdeadbeef, h2 = 0x41c6ce57;
+  for (let i = 0; i < s.length; i++) { const c = s.charCodeAt(i); h1 = Math.imul(h1 ^ c, 2654435761); h2 = Math.imul(h2 ^ c, 1597334677); }
+  h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+  h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+  return 'p' + (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(36);
+}
+function isoOr(v, fallback) {
+  const d = typeof v === 'number' ? new Date(v < 1e12 ? v * 1000 : v) : typeof v === 'string' && v ? new Date(v) : null;
+  return d && !isNaN(d) ? d.toISOString() : fallback;
+}
+/**
+ * Add the server's sign-ups to the wheel as source "phone". Known ids are skipped (and ids deleted here stay
+ * deleted, except on "Re-sync all"); duplicates of someone already on the list are skipped when blocking is on;
+ * at the 2,000 cap it stops, and the rest wait on the server until there is room. `through` = the last seq handled.
+ */
+function mergePhone(list, epoch, restore) {
+  const rows = list.filter(r => r && typeof r === 'object' && r.entryId != null).sort((a, b) => num(a.seq, 0) - num(b.seq, 0));
+  const out = { added: 0, known: 0, dup: 0, waiting: 0, through: null, maxSeq: null };
+  for (const r of rows) out.maxSeq = Math.max(out.maxSeq == null ? 0 : out.maxSeq, num(r.seq, 0));
+  const ids = new Set(state.entries.map(e => e.id));
+  const idx = S().blockDuplicates ? dupIndex() : null;
+  let room = wheelRoom(), pos = nextPos(), last = null;
+  for (let i = 0; i < rows.length; i++) {
+    const r = rows[i];
+    const id = phoneEntryId(epoch, r.entryId);
+    const name = strLine(r.name, 80), number = strLine(r.number, 64), email = strLine(r.email, 254);
+    if (ids.has(id) || (!restore && state.tomb[id]) || !name) { out.known++; out.through = num(r.seq, 0); continue; }
+    if (idx && findDuplicate(number, email, null, idx)) { out.dup++; out.through = num(r.seq, 0); continue; }
+    if (room <= 0) { out.waiting = rows.length - i; break; }
+    room--;
+    const at = isoOr(r.receivedAt, new Date().toISOString());
+    const e = {
+      id, name, number, email, weight: 1, consent: r.consent !== false, marketing: r.marketing === true,
+      consentAt: isoOr(r.consentAt, at), createdAt: at, source: 'phone', status: 'active', pos: pos++, updatedAt: stamp()
+    };
+    delete state.tomb[id]; // "Re-sync all" brings back a sign-up deleted on this laptop
+    state.entries.push(e);
+    ids.add(id);
+    if (idx) { const p = normPhone(number); if (p) idx.phones.add(p); const m = normEmail(email); if (m) idx.emails.add(m); }
+    out.added++;
+    out.through = num(r.seq, 0);
+    last = e;
+  }
+  if (last) { flashId = last.id; commit(); }
+  return out;
+}
+/** One check for new sign-ups (restore: read them all again from the start). Resolves to a summary, or null. */
+async function pollPhone({ restore = false } = {}) {
+  if (!sync.on || sync.busy) return null;
+  // The wheel never changes mid-spin: new sign-ups wait (queued on the server) and are fetched once it lands.
+  if (spinning) { schedulePoll(400); return null; }
+  clearTimeout(sync.timer);
+  sync.busy = true;
+  sync.again = false;
+  let sum = { added: 0, dup: 0, waiting: 0 };
+  let delay = POLL_MS;
+  try {
+    let since = restore ? 0 : sync.since;
+    for (let page = 0; page < 8; page++) {
+      const r = await api('entries', { query: { since }, admin: true });
+      if (r.status === 401) { sum = null; requireLogin(); return null; }
+      if (!r.ok) throw new Error('entries: ' + r.status);
+      const d = r.data;
+      const epoch = String(d.epoch == null ? '' : d.epoch);
+      if (sync.epoch !== null && epoch !== sync.epoch) {
+        // The sign-ups on the server were cleared elsewhere (new epoch): read the new set from the start.
+        operatorNote('The phone sign-ups on the server were cleared.', { detail: 'Entries already on this laptop are kept.' });
+        sync.epoch = epoch;
+        sync.since = 0;
+        saveCursor();
+        if (since !== 0) { since = 0; continue; }
+      }
+      sync.epoch = epoch;
+      const list = Array.isArray(d.entries) ? d.entries : [];
+      const m = mergePhone(list, epoch, restore);
+      sum.added += m.added;
+      sum.dup += m.dup;
+      sum.waiting = m.waiting;
+      if (m.through != null && m.through > sync.since) sync.since = m.through;
+      saveCursor();
+      if (Number.isFinite(+d.total) && d.total !== null) sync.total = +d.total;
+      if (m.dup && !restore) operatorNote(`${plural(m.dup, 'phone sign-up')} skipped: already on the list.`, { detail: 'Same phone number or email as an entry that is already here.' });
+      if (m.waiting) break;
+      const next = Number.isFinite(+d.next) && +d.next > since ? +d.next : Math.max(since, m.maxSeq || 0);
+      const more = typeof d.more === 'boolean' ? d.more : list.length >= PAGE_MAX;
+      if (!more || next <= since) break;
+      since = next;
+    }
+    sync.waiting = sum.waiting;
+    if (sync.waiting && !sync.fullWarned) toast(FULL_MSG, { type: 'error', detail: 'New phone sign-ups are kept on the server and join the wheel as soon as there’s room.' });
+    sync.fullWarned = !!sync.waiting;
+    sync.fails = 0;
+    sync.lastOk = Date.now();
+    if (++sync.polls % 5 === 0) refreshConfig(); // open / closed / full, in case it changed elsewhere
+  } catch (e) {
+    sum = null;
+    sync.fails++;
+    delay = Math.min(POLL_MAX_MS, POLL_MS * 2 ** sync.fails);
+  } finally {
+    sync.busy = false;
+    updatePill();
+    schedulePoll(sync.again ? 0 : delay);
+  }
+  return sum;
+}
+/** Sign-up news for the organiser; never on the audience's event-mode screen. */
+function operatorNote(msg, opts) { if (!eventMode) toast(msg, opts); }
+async function refreshConfig() {
+  const r = await api('config');
+  if (!r.ok) return null;
+  const c = cleanPublicConfig(r.data);
+  sync.cfg = c;
+  sync.open = c.open;
+  sync.full = c.full;
+  if (!sync.reconciled && sync.authed) { sync.reconciled = true; reconcileTexts(c); }
+  updatePill();
+  return c;
+}
+function serverTexts() {
+  const s = S();
+  return {
+    title: s.title || DEFAULTS.title, subtitle: s.subtitle, consentText: s.consentText || DEFAULT_CONSENT,
+    marketingText: s.marketingText || DEFAULT_MARKETING, showMarketing: !!s.showMarketing
+  };
+}
+/** After logging in: a laptop whose settings were never changed shows what the phones show; otherwise it updates them. */
+function reconcileTexts(c) {
+  const local = serverTexts();
+  if (!SERVER_TEXT_KEYS.some(k => local[k] !== c[k])) return;
+  if (!S().updatedAt) {
+    state.settings = { ...S(), title: c.title, subtitle: c.subtitle, consentText: c.consentText, marketingText: c.marketingText, showMarketing: c.showMarketing, updatedAt: stamp() };
+    commit();
+  } else pushConfig();
+}
+const pushTextsSoon = debounce(() => { if (appMode === 'organiser' && sync.authed) pushConfig(); }, 800);
+/** Send the guests' texts and the open/closed switch to api.php (setConfig). */
+async function pushConfig(extra = {}) {
+  if (sync.open == null) await refreshConfig();
+  const body = { open: sync.open !== false, ...serverTexts(), ...extra };
+  const r = await api('setConfig', { method: 'POST', body, admin: true });
+  if (r.status === 401) { requireLogin(); return r; }
+  if (r.ok) { sync.open = body.open; updatePill(); }
+  else {
+    toast('Couldn’t update the guests’ sign-up page.', {
+      type: 'error',
+      detail: r.network ? 'The server can’t be reached. Try again in a moment.' : (r.data && typeof r.data.message === 'string' ? str(r.data.message, 200) : `Error ${r.status}.`)
+    });
+  }
+  return r;
+}
+
+const PILL_TEXT = {
+  connecting: 'Phone sign-ups: connecting…', live: 'Phone sign-ups: live', reconnecting: 'Reconnecting…',
+  closed: 'Sign-ups closed', loggedout: 'Logged out'
+};
+function pillState() {
+  if (!sync.authed) return 'loggedout';
+  if (sync.fails) return 'reconnecting';
+  if (!sync.lastOk) return 'connecting';
+  return sync.open === false ? 'closed' : 'live';
+}
+function clockTime(ms) { const d = new Date(ms); return `${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`; }
+/** Status pill (header / panel) and the status line in Settings → Phone sign-ups. No counts on the pill. */
+function updatePill() {
+  if (appMode !== 'organiser') return;
+  const st = pillState();
+  const label = PILL_TEXT[st];
+  for (const p of $$('.sync-pill')) {
+    p.hidden = false;
+    p.dataset.state = st;
+    p.querySelector('.sp-text').textContent = label;
+    p.title = (sync.lastOk ? `Last checked ${clockTime(sync.lastOk)}. ` : '') + (st === 'loggedout' ? 'Click to log in.' : 'Click for phone sign-up settings.');
+  }
+  const el = $('#psStatus');
+  let msg = st === 'loggedout' ? 'Logged out: phone sign-ups aren’t arriving. Log in again to receive them.'
+    : st === 'reconnecting' ? 'Reconnecting… The server can’t be reached right now. Sign-ups are kept safe on the server and arrive once it’s back.'
+    : st === 'connecting' ? 'Connecting to the server…'
+    : st === 'closed' ? 'Sign-ups are closed: guests see “Entries are now closed.”'
+    : 'Live: guests’ sign-ups appear on the wheel within a few seconds.';
+  if ((st === 'live' || st === 'closed') && sync.total != null) msg += ` ${plural(sync.total, 'sign-up')} on the server.`;
+  if ((st === 'live' || st === 'closed') && sync.full) msg += ` The server is full (${MAX_ON_WHEEL.toLocaleString('en-GB')} sign-ups), so guests see “Sorry, this draw is full.”`;
+  if (sync.waiting) msg += ' Some sign-ups are waiting because the wheel is full.';
+  if (el.textContent !== msg) el.textContent = msg;
+  el.dataset.state = st;
+  const sw = $('#psOpen');
+  if (!sw.disabled && sync.open != null) sw.checked = sync.open;
+}
+function openServerSignup() {
+  let w = null;
+  try { w = window.open(guestAddress(), SIGNUP_WINDOW); } catch (e) { w = null; }
+  if (w) { try { w.focus(); } catch (e) { /* ignore */ } return; }
+  toast('Your browser blocked the new window.', { detail: `The guests’ sign-up form is at ${guestAddress()}` });
+}
+function showApiWarning() {
+  $('#srvBannerText').textContent = 'Phone sign-ups unavailable — api.php not found';
+  $('#srvBanner').hidden = false;
+}
+for (const p of $$('.sync-pill')) {
+  p.addEventListener('click', () => {
+    if (!sync.authed) { requireLogin(); return; }
+    selectTab($('#tab-settings'), false);
+    $('#phoneSet').scrollIntoView({ block: 'start', behavior: reduceMQ.matches ? 'auto' : 'smooth' });
+  });
+}
+$('#psCopy').addEventListener('click', async () => {
+  const text = guestAddress();
+  let ok = false;
+  try { if (navigator.clipboard && window.isSecureContext) { await navigator.clipboard.writeText(text); ok = true; } } catch (e) { ok = false; }
+  if (!ok) {
+    const inp = $('#psAddr');
+    inp.focus();
+    inp.select();
+    try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+  }
+  toast(ok ? 'Sign-up address copied. Make your QR code from it.' : 'Couldn’t copy automatically. The address is selected, so copy it yourself.', { detail: text });
+});
+$('#psOpen').addEventListener('change', async ev => {
+  const sw = ev.target;
+  const want = sw.checked;
+  sw.disabled = true;
+  const r = await pushConfig({ open: want });
+  sw.disabled = false;
+  if (!r.ok) { sw.checked = sync.open !== false; return; }
+  toast(want ? 'Sign-ups are open: guests can enter from their phones.' : 'Sign-ups are closed: guests now see “Entries are now closed.”');
+});
+$('#psResync').addEventListener('click', async ev => {
+  const b = ev.currentTarget;
+  if (!sync.on) return;
+  if (spinning) { toast('Finish the current draw first.'); return; }
+  b.disabled = true;
+  for (let i = 0; sync.busy && i < 150; i++) await sleep(100);
+  const sum = await pollPhone({ restore: true });
+  b.disabled = false;
+  if (!sum) { if (sync.authed) toast('Couldn’t reach the server. Try again in a moment.', { type: 'error' }); return; }
+  const detail = [sum.dup ? `${plural(sum.dup, 'sign-up')} skipped as already on the list.` : '', sum.waiting ? 'Some are waiting for room on the wheel.' : ''].filter(Boolean).join(' ');
+  toast(sum.added ? `Re-synced: ${plural(sum.added, 'sign-up')} added from the server.` : 'Re-synced: every sign-up on the server is already here.', { detail });
+});
+$('#psClear').addEventListener('click', async () => {
+  if (isLocked()) { toast('Finish the current draw first.'); return; }
+  const v = await askConfirm({
+    title: 'Clear all sign-ups on the server?',
+    text: 'This permanently deletes every phone sign-up stored by api.php on your web server. Entries already on this laptop stay here (download the Excel file first if you need them). Type DELETE to confirm.',
+    ok: 'Delete from server', danger: true,
+    input: { label: 'Type DELETE to confirm', type: 'text', inputMode: 'text', maxLength: 12, autocapitalize: 'characters' },
+    validate: val => (val.trim() === 'DELETE' ? '' : 'Type DELETE in capital letters to confirm.')
+  });
+  if (v == null) return;
+  const r = await api('clear', { method: 'POST', body: { confirm: 'DELETE' }, admin: true });
+  if (r.status === 401) { requireLogin(); return; }
+  if (!r.ok) { toast('Couldn’t clear the sign-ups on the server.', { type: 'error', detail: r.network ? 'The server can’t be reached. Try again in a moment.' : `Error ${r.status}.` }); return; }
+  // Start again on the server's new epoch without the "cleared elsewhere" note.
+  sync.epoch = null;
+  sync.since = 0;
+  sync.total = 0;
+  saveCursor();
+  toast('All sign-ups were deleted from the server.', { detail: 'Entries already on this laptop are kept.' });
+  refreshConfig();
+  pollNow();
+});
+$('#psLogout').addEventListener('click', async () => {
+  if (isLocked()) { toast('Finish the current draw first.'); return; }
+  stopSync();
+  await api('logout', { method: 'POST', body: {}, admin: true });
+  sync.authed = false;
+  lsSet(ORGANISER_KEY, '0');
+  sync.reconciled = false;
+  updatePill();
+  if (eventMode) exitEvent();
+  showLogin('You’re logged out. New sign-ups wait on the server until you log in again.', 'info');
+});
+window.addEventListener('focus', () => pollNow());
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') pollNow(); });
+
+/* ---------------------------------------------------------------------
+   16. Input wiring, init & test hooks
    --------------------------------------------------------------------- */
 $('#spinBtn').addEventListener('click', () => spin());
 // Holding Enter on the winner card: the first press applies the action and focus moves to SPIN, where the key's
@@ -3684,11 +4433,12 @@ document.addEventListener('keydown', ev => {
   }
 });
 // Unlock WebAudio on the first real gesture so ticks work from the first spin.
-const unlockAudio = () => { audioContext(); };
+const unlockAudio = () => { if (appMode !== 'guest') audioContext(); };
 window.addEventListener('pointerdown', unlockAudio, { once: true, capture: true });
 window.addEventListener('keydown', unlockAudio, { once: true, capture: true });
 
-function init() {
+/** The wheel app itself: offline, and for the organiser once logged in on the web server. */
+function initLocal() {
   initStorage();
   bindSettings();
   applyTheme();
@@ -3707,6 +4457,20 @@ function init() {
     if (!seen) setTimeout(() => { if (!signupOpen && !anyModalOpen()) openHelp(); }, 250);
   }
 }
+/** Picks the mode (SPEC 2.15 B). file:// never makes a request; on a web server api.php decides. */
+async function init() {
+  if (!IS_HTTP) { initLocal(); return; }
+  const probe = await probeApi();
+  if (!probe) {
+    // No api.php here (e.g. static hosting): exactly the offline app. On #wheel, a small warning says why.
+    document.documentElement.removeAttribute('data-app');
+    initLocal();
+    if (WANT_WHEEL) showApiWarning();
+    return;
+  }
+  if (WANT_WHEEL) startOrganiser(probe);
+  else startGuest(probe);
+}
 
 window.MAPDraw = Object.freeze({
   getState() {
@@ -3714,7 +4478,8 @@ window.MAPDraw = Object.freeze({
     return {
       entries: s.entries, log: s.log, settings: s.settings, round: s.meta.round, pending: s.meta.pending,
       active: s.entries.filter(e => e.status === 'active'),
-      wheel: wheelEntries.map(e => e.id), spinning, winnerOpen, eventMode, signupOpen, storage: storageOK
+      wheel: wheelEntries.map(e => e.id), spinning, winnerOpen, eventMode, signupOpen, storage: storageOK,
+      mode: appMode, phoneSync: { state: appMode === 'organiser' ? pillState() : null, epoch: sync.epoch, since: sync.since }
     };
   },
   pickWeightedIndex,
