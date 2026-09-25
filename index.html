@@ -1513,6 +1513,10 @@ function lsSet(k, v) { try { localStorage.setItem(k, v); return true; } catch (e
 
 /* Entry helpers */
 const activeEntries = () => state.entries.filter(e => e.status === 'active');
+/* The wheel holds at most MAX_ON_WHEEL people at once; every path that puts someone on the wheel checks it. */
+const MAX_ON_WHEEL = 2000;
+const wheelRoom = () => Math.max(0, MAX_ON_WHEEL - activeEntries().length);
+const FULL_MSG = `The wheel is full (${MAX_ON_WHEEL.toLocaleString('en-GB')} entries). Remove someone before adding more.`;
 const findEntry = id => state.entries.find(e => e.id === id);
 function nextPos() { let m = 0; for (const e of state.entries) if (e.pos > m) m = e.pos; return m + 1; }
 function makeEntry(f, source, pos) {
@@ -2569,6 +2573,7 @@ onFormSubmit(addForm, () => {
     if (firstBad) firstBad[1].focus();
     return;
   }
+  if (!wheelRoom()) { $('#addMsg').textContent = FULL_MSG; toast(FULL_MSG, { type: 'error' }); return; }
   const e = makeEntry({ ...res.values, consent: false }, 'manual');
   state.entries.push(e);
   flashId = e.id;
@@ -2679,7 +2684,8 @@ const SKIP_REASONS = [
   ['noEmail', n => `${n} missing an email`],
   ['badNumber', n => plural(n, 'invalid phone number')],
   ['badEmail', n => plural(n, 'invalid email')],
-  ['duplicate', n => plural(n, 'duplicate')]
+  ['duplicate', n => plural(n, 'duplicate')],
+  ['full', n => `${n} not added because the wheel is full (${MAX_ON_WHEEL.toLocaleString('en-GB')} max)`]
 ];
 /** Bulk paste / CSV import. Like the forms, every row needs a name, a valid phone number and a valid email; rows
     missing any of them (and duplicates, when blocking is on) are skipped and reported by reason. */
@@ -2687,6 +2693,7 @@ function importRecords(records, source) {
   const idx = S().blockDuplicates ? dupIndex() : null;
   let pos = nextPos();
   let added = 0;
+  let room = wheelRoom();
   const skipped = Object.fromEntries(SKIP_REASONS.map(([k]) => [k, 0]));
   for (const r of records) {
     const name = Array.from(cleanLine(r.name)).slice(0, 80).join('');
@@ -2694,8 +2701,9 @@ function importRecords(records, source) {
     const email = Array.from(cleanLine(r.email)).slice(0, 254).join('');
     const why = !name ? 'noName' : !number && !email ? 'noContact' : !number ? 'noNumber' : !email ? 'noEmail'
       : !isValidPhone(number) ? 'badNumber' : !isValidEmail(email) ? 'badEmail'
-      : idx && findDuplicate(number, email, null, idx) ? 'duplicate' : '';
+      : idx && findDuplicate(number, email, null, idx) ? 'duplicate' : room <= 0 ? 'full' : '';
     if (why) { skipped[why]++; continue; }
+    room--;
     const w = parseInt(r.weight, 10);
     const e = makeEntry({ name, number, email, weight: Number.isFinite(w) ? w : 1, consent: !!r.consent, marketing: false }, source, pos++);
     state.entries.push(e);
@@ -2861,6 +2869,7 @@ function returnToWheel(id, status = 'active') {
       return;
     }
   }
+  if (status === 'active' && !wheelRoom()) { toast(FULL_MSG, { type: 'error' }); return; }
   e.status = status; e.updatedAt = stamp(); commit();
   if (status === 'active') toast(`${e.name} is back on the wheel${isLocked() ? ' after this draw' : ''}.`);
 }
@@ -3353,6 +3362,7 @@ onFormSubmit(suForm, () => {
   if (bad) { bad[1].focus(); return; }
   if (!consent) { $('#suConsent').focus(); return; }
   if (dupMsg) { fe.scrollIntoView({ block: 'nearest' }); return; }
+  if (!wheelRoom()) { fe.hidden = false; fe.textContent = 'Sorry, this draw is full and can’t take any more entries.'; fe.scrollIntoView({ block: 'nearest' }); return; }
   const marketing = S().showMarketing && $('#suMarketing').checked;
   const entry = makeEntry({ ...res.values, weight: 1, consent: true, marketing, consentAt: new Date().toISOString() }, 'signup');
   state.entries.push(entry);

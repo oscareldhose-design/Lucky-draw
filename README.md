@@ -34,6 +34,8 @@ Round 1 again. The **Demo entries** button asks first if real people are already
 - **Bulk paste and CSV import** follow the same rule as the forms: every row needs a name, a valid
   phone number and a valid email. Other rows are skipped, and the report says why, for example
   *"Added 40, skipped 3: 2 missing a phone number, 1 invalid email."*
+- **Up to 2,000 people:** the wheel holds at most 2,000 entries at once. Extra imports, sign-ups and
+  additions are refused with a clear message until someone is removed.
 - **Duplicates:** by default, the same phone number or email can't be entered twice. `07…` and
   `+44 7…` count as the same number, and email case is ignored.
 - **The list:** search, filter (On wheel / Winners / All), edit, remove (with **Undo**) and
