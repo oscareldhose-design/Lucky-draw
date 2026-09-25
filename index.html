@@ -269,6 +269,7 @@ svg { flex: none; }
 .stage-info { text-align: center; font-size: 14px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--text-2); min-height: 20px; }
 .stage-info .queued { color: var(--accent-ink); }
 .stage-info .si { white-space: nowrap; }
+.stage-info .si-prize { white-space: normal; overflow-wrap: anywhere; }
 .controls { display: flex; align-items: flex-end; justify-content: center; gap: 16px; flex-wrap: wrap; }
 .prize-field { display: flex; flex-direction: column; gap: 6px; width: min(340px, 100%); }
 .prize-field label { font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--text-2); }
@@ -410,6 +411,7 @@ input[type="range"] { flex: 1; accent-color: var(--brand-600); height: 32px; min
 .badge-won { background: var(--brand-600); color: #fff; }
 .badge-removed { background: transparent; border: 1.5px solid var(--line-strong); color: var(--text-2); }
 .badge-tickets { background: color-mix(in srgb, var(--brand-600) 14%, var(--surface)); color: var(--accent-ink-2); }
+.badge-missing { background: var(--danger-bg); color: var(--danger); }
 :root[data-theme="dark"] .badge-tickets { color: var(--accent-ink-2); }
 .entry-actions { display: flex; gap: 2px; flex: none; }
 .entry-actions .btn-sm { min-height: 44px; }
@@ -550,7 +552,6 @@ dialog::backdrop { background: var(--backdrop); backdrop-filter: blur(3px); }
 .su-prize { display: inline-flex; align-self: flex-start; flex-direction: column; gap: 2px; padding: 14px 20px; border-radius: 18px; background: rgba(255, 255, 255, .14); border: 1px solid rgba(255, 255, 255, .28); max-width: 100%; }
 .su-prize .eyebrow { color: rgba(255, 255, 255, .85); }
 .su-prize strong { font-size: clamp(20px, 2.2vw, 30px); line-height: 1.15; overflow-wrap: anywhere; }
-.su-count { font-size: 15px; font-weight: 700; opacity: .9; }
 .su-main { display: flex; align-items: center; justify-content: center; padding: 48px clamp(20px, 5vw, 72px); min-width: 0; }
 .su-card { width: min(620px, 100%); display: flex; flex-direction: column; gap: 22px; }
 .su-card h2 { font-size: clamp(30px, 3.4vw, 44px); line-height: 1.05; color: var(--heading); }
@@ -572,18 +573,22 @@ dialog::backdrop { background: var(--backdrop); backdrop-filter: blur(3px); }
 .su-fine { font-size: 13px; color: var(--text-2); text-align: center; }
 .su-row { display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px; }
 .su-formerr { padding: 14px 16px; border-radius: 14px; background: var(--danger-bg); color: var(--danger); font-weight: 700; font-size: 16px; }
+/* Disclaimer above the Name field: a brand-tinted notice with an info icon */
+.su-notice { display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 12px; align-items: start; margin: 0; padding: 14px 16px; border-radius: 16px; background: color-mix(in srgb, var(--brand-600) 9%, var(--surface)); border: 2px solid color-mix(in srgb, var(--brand-600) 40%, transparent); border-left-width: 6px; border-left-color: var(--brand-600); color: var(--text); font-size: 16px; line-height: 1.45; }
+.su-notice .ic { width: 28px; height: 28px; color: var(--accent-ink); stroke-width: 2.2; }
+:root[data-theme="dark"] .su-notice { background: color-mix(in srgb, var(--brand-600) 22%, var(--surface)); border-color: color-mix(in srgb, var(--brand-500) 55%, transparent); border-left-color: var(--brand-500); }
 .su-exit { position: fixed; top: 14px; right: 14px; z-index: 3; display: inline-flex; align-items: center; gap: 6px; height: 44px; padding: 0 14px; border-radius: 999px; border: 1.5px solid var(--line-strong); background: var(--surface); color: var(--text-2); font-size: 14px; opacity: .9; }
 .su-exit:hover, .su-exit:focus-visible { opacity: 1; color: var(--accent-ink); }
-.su-success { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 18px; padding: 24px 0; cursor: pointer; }
+.su-success { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 18px; padding: 24px 0; }
 .su-tick { width: 132px; height: 132px; border-radius: 50%; display: grid; place-items: center; background: linear-gradient(135deg, var(--brand-600), var(--brand-800)); box-shadow: 0 18px 50px rgba(163, 8, 163, .45); animation: pop .55s cubic-bezier(.2, 1.4, .4, 1); }
 .su-tick svg { width: 64px; height: 64px; stroke: #fff; stroke-width: 3; fill: none; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 30; stroke-dashoffset: 30; animation: draw .5s .25s ease forwards; }
 @keyframes draw { to { stroke-dashoffset: 0; } }
-.su-success-title { font-size: clamp(34px, 4.6vw, 58px); line-height: 1.05; color: var(--heading); overflow-wrap: anywhere; }
-.su-success-sub { font-size: 22px; color: var(--text-2); font-weight: 700; }
-.su-timer { width: min(320px, 80%); height: 8px; border-radius: 99px; background: var(--surface-3); overflow: hidden; }
-.su-timer span { display: block; height: 100%; width: 100%; background: linear-gradient(90deg, var(--brand-600), var(--brand-800)); transform-origin: left; }
-.su-timer.run span { animation: shrink var(--su-ms, 4000ms) linear forwards; }
-@keyframes shrink { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+.su-card .su-success-title { font-size: clamp(34px, 4.6vw, 58px); line-height: 1.05; color: var(--heading); overflow-wrap: anywhere; }
+.su-success-sub { font-size: 22px; line-height: 1.35; color: var(--text); font-weight: 400; max-width: 30ch; overflow-wrap: anywhere; }
+.su-success-sub strong { color: var(--heading); }
+.su-success .btn { min-width: min(280px, 100%); }
+.su-another { font-size: 15px; font-weight: 400; color: var(--text-2); margin-top: 6px; }
+.su-another:hover, .su-another:focus-visible { color: var(--accent-ink); }
 @media (max-width: 900px), (max-aspect-ratio: 1/1) {
   /* max-content: the brand band is overflow:hidden (for its watermark), so an "auto" row could collapse it */
   .signup { grid-template-columns: minmax(0, 1fr); grid-template-rows: max-content 1fr; align-content: start; }
@@ -606,6 +611,7 @@ dialog::backdrop { background: var(--backdrop); backdrop-filter: blur(3px); }
   .su-lead { font-size: 16px; margin-top: -8px; }
   .su-form .input { min-height: 60px; font-size: 20px; }
   .check { padding: 10px 12px; font-size: 16px; }
+  .su-notice { padding: 10px 14px; font-size: 15px; line-height: 1.4; }
   .su-submit { min-height: 68px; font-size: 22px; }
   .su-brand { gap: 16px; padding-top: 40px; padding-bottom: 40px; }
   .su-brand .logo-plate { height: clamp(120px, 25vh, 200px); }
@@ -626,7 +632,10 @@ dialog::backdrop { background: var(--backdrop); backdrop-filter: blur(3px); }
   .su-form .input { min-height: 60px; font-size: 20px; }
   .check { font-size: 16px; grid-template-columns: 32px 1fr; gap: 12px; }
   .check input { width: 32px; height: 32px; }
+  .su-notice { grid-template-columns: 24px minmax(0, 1fr); gap: 10px; padding: 12px 14px; font-size: 15px; }
+  .su-notice .ic { width: 24px; height: 24px; }
   .su-submit { min-height: 68px; font-size: 22px; }
+  .su-success-sub { font-size: 19px; }
 }
 :root[data-theme="dark"] .su-watermark { filter: none; opacity: .2; }
 :root[data-theme="dark"] .su-brand { background: radial-gradient(120% 90% at 20% 10%, rgba(163, 8, 163, .55), rgba(110, 0, 110, .25) 45%, #000 80%); border-right: 1px solid var(--line); }
@@ -767,6 +776,7 @@ body.event-mode .toasts { top: 16px; left: 16px; right: auto; bottom: auto; tran
   <symbol id="i-spark" viewBox="0 0 24 24"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M19 17l.8 2.2L22 20l-2.2.8L19 23l-.8-2.2L16 20l2.2-.8z"/></symbol>
   <symbol id="i-eye" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></symbol>
   <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16.5v-5M12 7.5h.01"/></symbol>
 </svg>
 
 <a class="skip-link" href="#spinBtn">Skip to the SPIN button</a>
@@ -782,7 +792,7 @@ body.event-mode .toasts { top: 16px; left: 16px; right: auto; bottom: auto; tran
       </div>
     </div>
     <nav class="header-actions" aria-label="Display and mode controls">
-      <button type="button" class="hbtn" id="btnSignup" title="Open the guest sign-up screen"><svg class="ic" aria-hidden="true"><use href="#i-user-plus"/></svg><span class="hbtn-label">Guest sign-up</span></button>
+      <button type="button" class="hbtn" id="btnSignup" title="Open the guest sign-up screen in a new window"><svg class="ic" aria-hidden="true"><use href="#i-user-plus"/></svg><span class="hbtn-label">Guest sign-up</span></button>
       <button type="button" class="hbtn hbtn-primary" id="btnEvent" aria-keyshortcuts="F" title="Event mode: full screen, screen kept awake (F)"><svg class="ic" aria-hidden="true"><use href="#i-maximize"/></svg><span class="hbtn-label">Event mode</span></button>
       <button type="button" class="hbtn icon-only" id="btnSound" aria-pressed="true" aria-label="Sound" title="Sound on/off"><svg class="ic ic-vol" aria-hidden="true"><use href="#i-volume"/></svg><svg class="ic ic-mute" aria-hidden="true"><use href="#i-mute"/></svg></button>
       <button type="button" class="hbtn icon-only" id="btnTheme" aria-label="Switch to dark theme" title="Light / dark theme"><svg class="ic ic-moon" aria-hidden="true"><use href="#i-moon"/></svg><svg class="ic ic-sun" aria-hidden="true"><use href="#i-sun"/></svg></button>
@@ -850,6 +860,7 @@ body.event-mode .toasts { top: 16px; left: 16px; right: auto; bottom: auto; tran
       <section class="tabpanel" role="tabpanel" id="panel-entries" aria-labelledby="tab-entries" tabindex="0">
         <form class="card" id="addForm" novalidate autocomplete="off">
           <h3 class="card-title">Add an entry</h3>
+          <p class="card-note" id="fReqNote">Name, phone number and email are all required.</p>
           <div class="field">
             <label for="fName">Name</label>
             <input class="input" id="fName" name="name" type="text" maxlength="80" autocomplete="off" aria-describedby="fNameErr" required>
@@ -857,13 +868,13 @@ body.event-mode .toasts { top: 16px; left: 16px; right: auto; bottom: auto; tran
           </div>
           <div class="form-grid">
             <div class="field">
-              <label for="fNumber">Phone number <span class="opt" data-opt="number"></span></label>
-              <input class="input" id="fNumber" name="number" type="tel" inputmode="tel" maxlength="24" autocomplete="off" aria-describedby="fNumberErr">
+              <label for="fNumber">Phone number</label>
+              <input class="input" id="fNumber" name="number" type="tel" inputmode="tel" maxlength="24" autocomplete="off" aria-describedby="fNumberErr" required>
               <p class="err" id="fNumberErr" hidden></p>
             </div>
             <div class="field">
-              <label for="fEmail">Email <span class="opt" data-opt="email"></span></label>
-              <input class="input" id="fEmail" name="email" type="email" inputmode="email" maxlength="254" autocomplete="off" aria-describedby="fEmailErr">
+              <label for="fEmail">Email</label>
+              <input class="input" id="fEmail" name="email" type="email" inputmode="email" maxlength="254" autocomplete="off" aria-describedby="fEmailErr" required>
               <p class="err" id="fEmailErr" hidden></p>
             </div>
           </div>
@@ -888,7 +899,7 @@ body.event-mode .toasts { top: 16px; left: 16px; right: auto; bottom: auto; tran
             <label for="bulkText">Paste one per line: Name, Phone number, Email</label>
             <textarea class="textarea" id="bulkText" rows="5" spellcheck="false" placeholder="Priya Sharma, 07700 900123, priya@example.com&#10;Tom Whitaker, 07700 900456, tom@example.com"></textarea>
           </div>
-          <p class="card-note">Comma or tab separated, so you can paste straight from Excel or Google Sheets. An optional 4th column sets tickets.</p>
+          <p class="card-note">Every line needs a name, phone number and email. Lines missing any of them, or with an invalid number or email, are skipped and reported. Comma or tab separated, so you can paste straight from Excel or Google Sheets. An optional 4th column sets tickets.</p>
           <div class="btn-row">
             <button type="button" class="btn btn-primary" id="bulkAdd">Add these</button>
             <label class="btn btn-secondary file-btn"><svg class="ic ic-sm" aria-hidden="true"><use href="#i-upload"/></svg>Import CSV<input type="file" id="csvFile" accept=".csv,.txt,.tsv,text/csv,text/plain"></label>
@@ -1000,8 +1011,6 @@ body.event-mode .toasts { top: 16px; left: 16px; right: auto; bottom: auto; tran
         <fieldset class="set-group">
           <legend>Privacy &amp; entries</legend>
           <label class="switch-row" for="sPrivacy"><span class="sw-text">Privacy mode<small>Mask phone numbers and emails on screen.</small></span><input class="switch" id="sPrivacy" type="checkbox" role="switch" data-setting="privacy"></label>
-          <label class="switch-row" for="sReqNumber"><span class="sw-text">Phone number required</span><input class="switch" id="sReqNumber" type="checkbox" role="switch" data-setting="requireNumber"></label>
-          <label class="switch-row" for="sReqEmail"><span class="sw-text">Email required</span><input class="switch" id="sReqEmail" type="checkbox" role="switch" data-setting="requireEmail"></label>
           <label class="switch-row" for="sDupes"><span class="sw-text">Block duplicate entries<small>Same phone number (07… and +44 7… match) or same email.</small></span><input class="switch" id="sDupes" type="checkbox" role="switch" data-setting="blockDuplicates"></label>
         </fieldset>
         <fieldset class="set-group">
@@ -1047,15 +1056,15 @@ body.event-mode .toasts { top: 16px; left: 16px; right: auto; bottom: auto; tran
       <p class="su-title" data-bind="title">Lucky Draw</p>
       <p class="su-sub" data-bind="subtitle">Spin to win</p>
       <p class="su-prize" id="suPrize" hidden><span class="eyebrow">Today’s prize</span><strong id="suPrizeText"></strong></p>
-      <p class="su-count" id="suCount" hidden></p>
     </div>
   </div>
   <div class="su-main">
     <div class="su-card" id="suCard">
-      <form class="su-form" id="suForm" novalidate autocomplete="off">
+      <form class="su-form" id="suForm" novalidate autocomplete="off" aria-describedby="suNotice">
         <h2 id="suHeading" tabindex="-1">Enter the draw</h2>
         <p class="su-lead">Takes a few seconds. Winners are picked at random.</p>
         <p class="su-formerr" id="suFormErr" role="alert" hidden></p>
+        <p class="su-notice" id="suNotice"><svg class="ic" aria-hidden="true"><use href="#i-info"/></svg><span>Please ensure that all details are correct as we will message a code to your number to confirm you have given the correct details which is necessary to claim your prize on stage.</span></p>
         <div class="field">
           <label for="suName">Your name</label>
           <input class="input" id="suName" type="text" maxlength="80" autocomplete="off" autocapitalize="words" enterkeyhint="next" aria-describedby="suNameErr" required>
@@ -1063,13 +1072,13 @@ body.event-mode .toasts { top: 16px; left: 16px; right: auto; bottom: auto; tran
         </div>
         <div class="su-row">
         <div class="field">
-          <label for="suNumber">Phone number <span class="opt" data-opt="number"></span></label>
-          <input class="input" id="suNumber" type="tel" inputmode="tel" maxlength="24" autocomplete="off" enterkeyhint="next" aria-describedby="suNumberErr">
+          <label for="suNumber">Phone number</label>
+          <input class="input" id="suNumber" type="tel" inputmode="tel" maxlength="24" autocomplete="off" enterkeyhint="next" aria-describedby="suNumberErr suNotice" required>
           <p class="err" id="suNumberErr" hidden></p>
         </div>
         <div class="field">
-          <label for="suEmail">Email <span class="opt" data-opt="email"></span></label>
-          <input class="input" id="suEmail" type="email" inputmode="email" maxlength="254" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="go" aria-describedby="suEmailErr">
+          <label for="suEmail">Email</label>
+          <input class="input" id="suEmail" type="email" inputmode="email" maxlength="254" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="go" aria-describedby="suEmailErr" required>
           <p class="err" id="suEmailErr" hidden></p>
         </div>
         </div>
@@ -1081,10 +1090,10 @@ body.event-mode .toasts { top: 16px; left: 16px; right: auto; bottom: auto; tran
       </form>
       <div class="su-success" id="suSuccess" hidden role="status" aria-live="polite">
         <div class="su-tick" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></div>
-        <p class="su-success-title" id="suSuccessTitle">You’re in! Good luck.</p>
-        <p class="su-success-sub">Good luck.</p>
-        <div class="su-timer" id="suTimer"><span></span></div>
-        <button type="button" class="btn btn-secondary btn-lg" id="suNext">Next guest</button>
+        <h2 class="su-success-title" id="suSuccessTitle" tabindex="-1">You’re entered into the raffle!</h2>
+        <p class="su-success-sub" id="suSuccessText">Thank you. You may now close this window.</p>
+        <button type="button" class="btn btn-primary btn-lg" id="suClose" hidden>Close window</button>
+        <button type="button" class="link-btn su-another" id="suAnother">Enter another person</button>
       </div>
     </div>
   </div>
@@ -1098,7 +1107,7 @@ body.event-mode .toasts { top: 16px; left: 16px; right: auto; bottom: auto; tran
     <div class="wd-body">
       <svg class="wd-mark logo-mark" viewBox="0 0 294 309" aria-hidden="true"><use href="#map-mark" width="294" height="309"/></svg>
       <p class="wd-kicker" id="wdKicker">And the winner is</p>
-      <h2 class="wd-name" id="wdName">—</h2>
+      <h2 class="wd-name" id="wdName" dir="auto">—</h2>
       <p class="wd-contact"><span class="val" id="wdContact"></span><button type="button" class="link-btn" id="wdReveal" aria-pressed="false">Show details</button></p>
     </div>
     <div class="wd-actions" id="wdActions">
@@ -1136,11 +1145,11 @@ body.event-mode .toasts { top: 16px; left: 16px; right: auto; bottom: auto; tran
     <ol class="help-steps">
       <li class="help-step">
         <svg viewBox="0 0 76 76" aria-hidden="true"><rect x="8" y="10" width="60" height="56" rx="10" fill="#f7e6f7"/><rect x="16" y="20" width="44" height="8" rx="4" fill="#fff" stroke="#a308a3" stroke-width="2"/><rect x="16" y="33" width="44" height="8" rx="4" fill="#fff" stroke="#a308a3" stroke-width="2"/><rect x="16" y="46" width="28" height="10" rx="5" fill="#a308a3"/><circle cx="56" cy="54" r="11" fill="#6e006e"/><path d="M56 48v12M50 54h12" stroke="#fff" stroke-width="3" stroke-linecap="round"/></svg>
-        <div><h3><span class="num">1</span>Add people</h3><p>Type a name, phone number and email in <b>Entries</b>, paste a list, or import a CSV. Give someone extra tickets to boost their chance.</p></div>
+        <div><h3><span class="num">1</span>Add people</h3><p>Type a name, phone number and email in <b>Entries</b> (all three are required), paste a list, or import a CSV. Give someone extra tickets to boost their chance.</p></div>
       </li>
       <li class="help-step">
         <svg viewBox="0 0 76 76" aria-hidden="true"><rect x="6" y="14" width="40" height="52" rx="7" fill="#6e006e"/><rect x="11" y="20" width="30" height="36" rx="3" fill="#fff"/><rect x="15" y="26" width="22" height="5" rx="2.5" fill="#e7b3e7"/><rect x="15" y="35" width="22" height="5" rx="2.5" fill="#e7b3e7"/><rect x="15" y="45" width="14" height="6" rx="3" fill="#a308a3"/><rect x="40" y="8" width="30" height="24" rx="5" fill="#a308a3"/><path d="M47 44c6 0 10-4 10-9" stroke="#a308a3" stroke-width="3" fill="none" stroke-linecap="round"/><path d="m53 33 4 3 3-4" stroke="#a308a3" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        <div><h3><span class="num">2</span>Let guests sign up</h3><p>Open <b>Guest sign-up</b> on a tablet or a second window. Guests tick consent and join the wheel; a second window on this device syncs live.</p></div>
+        <div><h3><span class="num">2</span>Let guests sign up</h3><p><b>Guest sign-up</b> opens the form in a new window. Guests enter their name, phone number and email, tick consent and see “You’re entered into the raffle!”. They join the wheel straight away.</p></div>
       </li>
       <li class="help-step">
         <svg viewBox="0 0 76 76" aria-hidden="true"><circle cx="38" cy="40" r="30" fill="#6e006e"/><path d="M38 40 38 10A30 30 0 0 1 64 25Z" fill="#a308a3"/><path d="M38 40 64 55A30 30 0 0 1 38 70Z" fill="#a308a3"/><path d="M38 40 12 55A30 30 0 0 1 12 25Z" fill="#c94fc9"/><circle cx="38" cy="40" r="8" fill="#fff"/><path d="M38 16 31 3h14z" fill="#2a002a"/></svg>
@@ -1272,8 +1281,9 @@ const DEFAULT_MARKETING = 'Keep me updated with news and offers from MAP.';
 const DEFAULTS = Object.freeze({
   title: 'Lucky Draw', subtitle: 'Spin to win', prize: '',
   duration: 8, removeWinners: true, sound: true, volume: 0.7, confetti: true,
-  theme: 'light', palette: 'duo', labels: 'full', privacy: true,
-  requireNumber: true, requireEmail: true, blockDuplicates: true,
+  // Name, phone number and email are always required (no settings for it): older saved "requireNumber" /
+  // "requireEmail" values are not in DEFAULTS, so cleanSettings() drops them.
+  theme: 'light', palette: 'duo', labels: 'full', privacy: true, blockDuplicates: true,
   consentText: DEFAULT_CONSENT, showMarketing: true, marketingText: DEFAULT_MARKETING, pin: ''
 });
 const STATUSES = ['active', 'won', 'removed'];
@@ -1335,8 +1345,13 @@ function cleanSettings(s) {
 function freshState() {
   return {
     v: 1, epoch: { id: 'initial', at: 0 }, entries: [], log: [], tomb: {},
-    settings: cleanSettings(null), meta: { round: 0, updatedAt: 0 }
+    settings: cleanSettings(null), meta: { round: 0, pending: null, updatedAt: 0 }
   };
+}
+/** meta.pending: the draw whose winner card is (or was, before a reload) open and still needs an action. */
+function cleanPending(p) {
+  if (!p || typeof p !== 'object' || !p.logId) return null;
+  return { logId: str(p.logId, 64), redraw: !!p.redraw, marked: !!p.marked };
 }
 function cleanState(raw) {
   if (!raw || typeof raw !== 'object') return null;
@@ -1346,7 +1361,7 @@ function cleanState(raw) {
   s.log = (Array.isArray(raw.log) ? raw.log : []).map(cleanLog).filter(Boolean);
   if (raw.tomb && typeof raw.tomb === 'object') for (const [k, v] of Object.entries(raw.tomb)) if (Number.isFinite(+v)) s.tomb[k] = +v;
   s.settings = cleanSettings(raw.settings);
-  if (raw.meta) s.meta = { round: Math.max(0, Math.floor(num(raw.meta.round, 0))), updatedAt: num(raw.meta.updatedAt, 0) };
+  if (raw.meta) s.meta = { round: Math.max(0, Math.floor(num(raw.meta.round, 0))), pending: cleanPending(raw.meta.pending), updatedAt: num(raw.meta.updatedAt, 0) };
   sortEntries(s.entries);
   return s;
 }
@@ -1446,7 +1461,26 @@ function applyRemote(remote) {
   // Two windows can save at the same moment and one write can overwrite the other. If this window still holds
   // records the other side lacks, save the merged state (and tell the others) so nothing is lost on reload.
   if (hasNewer(state, remote)) { persist(); broadcast(); }
+  // This window's winner card was finished in another window (e.g. both reopened it after a reload): close it.
+  if (winnerOpen && currentWin && !spinning) {
+    const p = state.meta.pending;
+    if (!p || p.logId !== currentWin.rec.id) dismissWinnerCard();
+  }
   renderAll();
+}
+/* A window opened later asks the others for the current state ("hello"). This matters when storage is blocked:
+   without it a new sign-up window would start empty (no PIN, default texts, no duplicate check). */
+let peerStateSeen = false;
+let peerWaiters = [];
+function notePeerState() {
+  peerStateSeen = true;
+  const w = peerWaiters; peerWaiters = [];
+  for (const fn of w) fn();
+}
+/** Resolves once another window has answered, or after `ms` (there may be no other window). */
+function peerStateReady(ms = 700) {
+  if (storageOK || peerStateSeen || !channel) return Promise.resolve();
+  return new Promise(res => { peerWaiters.push(res); setTimeout(res, ms); });
 }
 function initStorage() {
   storageOK = storageProbe();
@@ -1457,8 +1491,11 @@ function initStorage() {
       channel = new BroadcastChannel(CHANNEL_NAME);
       channel.onmessage = ev => {
         const d = ev.data;
-        if (d && d.type === 'state' && d.from !== TAB_ID) applyRemote(cleanState(d.state));
+        if (!d || d.from === TAB_ID) return;
+        if (d.type === 'hello') { broadcast(); return; }
+        if (d.type === 'state') { applyRemote(cleanState(d.state)); notePeerState(); }
       };
+      channel.postMessage({ type: 'hello', from: TAB_ID });
     }
   } catch (e) { channel = null; }
   window.addEventListener('storage', ev => {
@@ -1544,7 +1581,7 @@ function dupIndex() {
   }
   return { phones, emails };
 }
-/** Strict validation used by the add form, row edit and guest sign-up. */
+/** Strict validation used by the add form, row edit and guest sign-up. Name, phone number and email are all required. */
 function validateFields(f, { excludeId } = {}) {
   const errors = {};
   const name = cleanLine(f.name);
@@ -1552,9 +1589,9 @@ function validateFields(f, { excludeId } = {}) {
   const email = cleanLine(f.email);
   if (!name) errors.name = 'Please enter a name.';
   else if (Array.from(name).length > 80) errors.name = 'Name must be 80 characters or fewer.';
-  if (!number) { if (S().requireNumber) errors.number = 'Please enter a phone number.'; }
+  if (!number) errors.number = 'Please enter a phone number.';
   else if (!isValidPhone(number)) errors.number = 'Enter a valid phone number (7–15 digits; +, spaces, dashes and brackets are fine).';
-  if (!email) { if (S().requireEmail) errors.email = 'Please enter an email address.'; }
+  if (!email) errors.email = 'Please enter an email address.';
   else if (!isValidEmail(email)) errors.email = 'Enter a valid email address, like name@example.com.';
   let weight = 1;
   if (f.weight !== undefined) {
@@ -1725,10 +1762,14 @@ function wheelLabel(e) {
   if (parts.length < 2) return clean;
   return parts[0] + ' ' + firstChar(parts[parts.length - 1]).toUpperCase() + '.';
 }
+/** True when the first strong (letter) character is right-to-left (Hebrew, Arabic, Syriac, Thaana, N’Ko…). */
+const RTL_FIRST_RE = /^[^\p{L}]*[֐-ࣿיִ-﷿ﹰ-﻿\u{10800}-\u{10FFF}\u{1E800}-\u{1EFFF}]/u;
+const isRtl = text => RTL_FIRST_RE.test(text);
 function isLocked() { return spinning || winnerOpen; }
 
 function rebuildWheel() {
-  wheelEntries = activeEntries();
+  // Copied by value, so nothing saved during a draw can change the frozen wheel or the winner's log record.
+  wheelEntries = activeEntries().map(e => ({ ...e }));
   wheelSegs = buildSegments(wheelEntries);
   wheelDirty = false;
   drawWheel();
@@ -1850,8 +1891,10 @@ function drawWheel() {
       const label = wheelLabel(wheelEntries[i]);
       if (!label) continue;
       ctx.fillStyle = labelColour(wheelFills[i]);
+      // RTL names are laid out right-to-left, so a truncated one ends in "…" at its logical end (towards the hub).
       if (n === 1) {
         ctx.save();
+        ctx.direction = isRtl(label) ? 'rtl' : 'ltr';
         ctx.textAlign = 'center';
         const fit = fitLabel(label, baseFs * 1.25, Rs * 1.3);
         ctx.font = `700 ${fit.fs}px ${FONT}`;
@@ -1865,6 +1908,7 @@ function drawWheel() {
       if (!fit.text) continue;
       ctx.save();
       ctx.rotate(s.start + span / 2 - Math.PI / 2);
+      ctx.direction = isRtl(label) ? 'rtl' : 'ltr';
       ctx.textAlign = 'right';
       ctx.font = `700 ${fit.fs}px ${FONT}`;
       ctx.fillText(fit.text, outer, 0);
@@ -2103,7 +2147,7 @@ function spin(opts = {}) {
       spinning = false;
       wheelEl.classList.remove('is-spinning');
       const entry = entries[winIdx];
-      onLanded(entry, round, prize, winIdx);
+      onLanded(entry, round, prize, winIdx, !!opts.redraw);
       resolve(JSON.parse(JSON.stringify(entry)));
     };
     const step = now => {
@@ -2130,16 +2174,22 @@ function spin(opts = {}) {
   });
   return spinPromise;
 }
-function onLanded(entry, round, prize, idx) {
+function onLanded(entry, round, prize, idx, redraw) {
   const rec = {
     id: 'l' + uid(), round, prize, entryId: entry.id, name: entry.name, number: entry.number, email: entry.email,
     type: 'Winner', at: new Date().toISOString(), updatedAt: stamp()
   };
   state.log.push(rec);
+  // With "Remove winners" on, the winner leaves the wheel as soon as it lands ("Keep on wheel" puts them back),
+  // so a reload or a closed tab while the card is open can never leave them on the wheel to win again.
+  const live = findEntry(entry.id);
+  const marked = !!(S().removeWinners && live && live.status === 'active');
+  if (marked) { live.status = 'won'; live.updatedAt = stamp(); }
   // The round only counts once a winner is drawn, so closing the page mid-spin never skips a number.
-  if (round > state.meta.round) state.meta = { round, updatedAt: stamp() };
+  // meta.pending remembers the open card, so a reload shows it again for the operator to finish.
+  state.meta = { ...state.meta, round: Math.max(state.meta.round, round), pending: { logId: rec.id, redraw: !!redraw, marked }, updatedAt: stamp() };
   winnerOpen = true;
-  currentWin = { rec, entryId: entry.id };
+  currentWin = { rec, entryId: entry.id, redraw: !!redraw, marked };
   commit();
   playFanfare();
   drawSpotlight(idx);
@@ -2298,13 +2348,15 @@ function startConfetti() {
    --------------------------------------------------------------------- */
 const winnerDialog = $('#winnerDialog');
 let revealContact = false;
-function openWinnerDialog(rec) {
+let lastWinnerClose = -1e9;   // performance.now() when the winner card last closed (guards SPIN against key repeat)
+function openWinnerDialog(rec, { quiet = false } = {}) {
   revealContact = false;
   $('#wdRound').textContent = `Round ${rec.round}`;
   $('#wdPrize').textContent = rec.prize || '';
   $('#wdDot').hidden = !rec.prize;
   $('#wdName').textContent = rec.name;
-  const redraw = state.log.some(r => r.round === rec.round && r.type === 'No-show' && r.id !== rec.id);
+  // The draw itself says whether it is a no-show redraw (round numbers repeat after "Reset round counter").
+  const redraw = !!(currentWin && currentWin.redraw);
   $('#wdKicker').textContent = redraw ? 'Redraw after a no-show — the new winner is' : 'And the winner is';
   renderWinnerContact();
   const primary = defaultWinnerAction();
@@ -2315,10 +2367,38 @@ function openWinnerDialog(rec) {
   first.className = 'btn btn-primary btn-xl wd-primary';
   second.className = 'btn btn-secondary btn-lg';
   actions.replaceChildren(first, second, btnNo);
-  $('#wdHint').textContent = `Esc = ${primary === 'remove' ? 'Remove from wheel' : 'Keep on wheel'}`;
+  $('#wdHint').textContent = (currentWin && currentWin.restored ? 'Reopened after the page reloaded. ' : '') + `Esc = ${primary === 'remove' ? 'Remove from wheel' : 'Keep on wheel'}`;
   try { if (!winnerDialog.open) winnerDialog.showModal(); } catch (e) { winnerDialog.setAttribute('open', ''); }
   first.focus();
-  startConfetti();
+  if (!quiet) startConfetti();
+}
+/** A reload (or a crash) while a winner card was open: show that card again so the operator can still choose. */
+function restorePendingWinner() {
+  const p = state.meta.pending;
+  if (!p) return false;
+  const rec = state.log.find(r => r.id === p.logId);
+  if (!rec || rec.type !== 'Winner') {
+    state.meta = { ...state.meta, pending: null, updatedAt: stamp() };
+    commit();
+    return false;
+  }
+  winnerOpen = true;
+  drawRound = rec.round;
+  currentWin = { rec, entryId: rec.entryId, redraw: p.redraw, marked: p.marked, restored: true };
+  renderAll();
+  openWinnerDialog(rec, { quiet: true });
+  return true;
+}
+/** Close the card without an action, because the draw was finished in another window (or all data was deleted). */
+function dismissWinnerCard() {
+  currentWin = null;
+  winnerOpen = false;
+  lastWinnerClose = performance.now();
+  clearTimeout(revealTimer);
+  revealTimer = 0;
+  clearSpotlight();
+  stopConfetti();
+  if (winnerDialog.open) winnerDialog.close();
 }
 function renderWinnerContact() {
   if (!currentWin) return;
@@ -2333,20 +2413,28 @@ function renderWinnerContact() {
 /** Apply a winner action: 'remove' | 'keep' | 'noshow'. */
 function finishWinner(action) {
   if (!winnerOpen || !currentWin) return;
-  const { rec } = currentWin;
+  const { rec, marked } = currentWin;
   currentWin = null;
   winnerOpen = false;
+  lastWinnerClose = performance.now();
   clearTimeout(revealTimer);
   revealTimer = 0;
   clearSpotlight();
   const entry = findEntry(rec.entryId);
   if (action === 'remove') {
     if (entry && entry.status === 'active') { entry.status = 'won'; entry.updatedAt = stamp(); }
+  } else if (action === 'keep') {
+    // They were taken off when the wheel landed ("Remove winners" is on): put them back.
+    if (entry && marked && entry.status === 'won') { entry.status = 'active'; entry.updatedAt = stamp(); }
   } else if (action === 'noshow') {
     const r = state.log.find(l => l.id === rec.id);
     if (r) { r.type = 'No-show'; r.updatedAt = stamp(); }
     if (entry) { entry.status = 'removed'; entry.updatedAt = stamp(); }
   }
+  // A confirmed winner has had the prize, so it doesn't carry into the next round unnoticed (the box then shows
+  // "Last prize: …" as a hint). A no-show keeps it for the redraw. A prize typed during the spin is left alone.
+  if (action !== 'noshow' && rec.prize && cleanLine(S().prize) === rec.prize) state.settings = { ...S(), prize: '', updatedAt: stamp() };
+  if (state.meta.pending && state.meta.pending.logId === rec.id) state.meta = { ...state.meta, pending: null, updatedAt: stamp() };
   stopConfetti();
   if (winnerDialog.open) winnerDialog.close();
   commit();
@@ -2374,6 +2462,7 @@ $('#wdReveal').addEventListener('click', () => { revealContact = !revealContact;
 /** Non-blocking message. A repeat of a message already on screen just stays up longer; at most two at once
     (one on a phone in event mode, where the space above the wheel is small). */
 function toast(msg, { type = 'info', detail = '', timeout = 4200, action = null } = {}) {
+  if (signupOpen) return null; // operator messages are never shown to guests (they would cover the form)
   const box = $('#toasts');
   const key = `${type}|${msg}|${detail}`;
   const same = !action && Array.from(box.children).find(el => el.dataset.key === key);
@@ -2582,18 +2671,31 @@ function rowsToRecords(rows) {
     return { name, number: get(r, 'number'), email: get(r, 'email'), weight: get(r, 'weight') };
   });
 }
-/** Lenient bulk import: only a name is required; duplicates skipped when blocking is on. */
+/* Why a bulk / CSV row was skipped, in the order they are reported ("Skipped 3: 2 missing a phone number, 1 invalid email"). */
+const SKIP_REASONS = [
+  ['noName', n => `${n} missing a name`],
+  ['noContact', n => `${n} missing a phone number and email`],
+  ['noNumber', n => `${n} missing a phone number`],
+  ['noEmail', n => `${n} missing an email`],
+  ['badNumber', n => plural(n, 'invalid phone number')],
+  ['badEmail', n => plural(n, 'invalid email')],
+  ['duplicate', n => plural(n, 'duplicate')]
+];
+/** Bulk paste / CSV import. Like the forms, every row needs a name, a valid phone number and a valid email; rows
+    missing any of them (and duplicates, when blocking is on) are skipped and reported by reason. */
 function importRecords(records, source) {
   const idx = S().blockDuplicates ? dupIndex() : null;
   let pos = nextPos();
   let added = 0;
-  const skipped = { noName: 0, duplicate: 0 };
+  const skipped = Object.fromEntries(SKIP_REASONS.map(([k]) => [k, 0]));
   for (const r of records) {
     const name = Array.from(cleanLine(r.name)).slice(0, 80).join('');
-    if (!name) { skipped.noName++; continue; }
-    const number = Array.from(cleanLine(r.number)).slice(0, 32).join('');
+    const number = cleanLine(r.number);
     const email = Array.from(cleanLine(r.email)).slice(0, 254).join('');
-    if (idx && findDuplicate(number, email, null, idx)) { skipped.duplicate++; continue; }
+    const why = !name ? 'noName' : !number && !email ? 'noContact' : !number ? 'noNumber' : !email ? 'noEmail'
+      : !isValidPhone(number) ? 'badNumber' : !isValidEmail(email) ? 'badEmail'
+      : idx && findDuplicate(number, email, null, idx) ? 'duplicate' : '';
+    if (why) { skipped[why]++; continue; }
     const w = parseInt(r.weight, 10);
     const e = makeEntry({ name, number, email, weight: Number.isFinite(w) ? w : 1, consent: !!r.consent, marketing: false }, source, pos++);
     state.entries.push(e);
@@ -2601,16 +2703,14 @@ function importRecords(records, source) {
     added++;
   }
   if (added) commit();
-  const reasons = [];
-  if (skipped.duplicate) reasons.push(plural(skipped.duplicate, 'duplicate'));
-  if (skipped.noName) reasons.push(`${skipped.noName} without a name`);
-  const nSkip = skipped.duplicate + skipped.noName;
-  return { added, skipped: nSkip, text: `Added ${added}, skipped ${nSkip}${reasons.length ? ` (${reasons.join(', ')})` : ''}.` };
+  const reasons = SKIP_REASONS.filter(([k]) => skipped[k]).map(([k, say]) => say(skipped[k]));
+  const nSkip = SKIP_REASONS.reduce((n, [k]) => n + skipped[k], 0);
+  return { added, skipped: nSkip, reasons: skipped, text: `Added ${added}, skipped ${nSkip}${reasons.length ? `: ${reasons.join(', ')}` : ''}.` };
 }
 $('#bulkAdd').addEventListener('click', () => {
   const ta = $('#bulkText');
   const text = ta.value;
-  if (!text.trim()) { $('#bulkMsg').textContent = 'Paste some names first — one per line.'; ta.focus(); return; }
+  if (!text.trim()) { $('#bulkMsg').textContent = 'Paste some people first — one per line: Name, Phone number, Email.'; ta.focus(); return; }
   const res = importRecords(rowsToRecords(parseCSV(text, 'line')), 'manual');
   $('#bulkMsg').textContent = res.text;
   if (res.added) ta.value = '';
@@ -2651,11 +2751,14 @@ function renderEntries() {
   const won = wonEntryIds();
   const q = listQuery;
   const qDigits = q.replace(/\D/g, '');
+  // Phone search matches however the number was typed: "07700 900222" finds "+44 7700 900222" and vice versa.
+  const qPhone = qDigits.length >= 3 ? normPhone(q) : '';
   let items = state.entries.filter(e => {
     if (listFilter === 'active' && e.status !== 'active') return false;
     if (listFilter === 'winners' && !(e.status === 'won' || won.has(e.id))) return false;
     if (!q) return true;
-    return e.name.toLowerCase().includes(q) || e.email.toLowerCase().includes(q) || (qDigits.length >= 3 && e.number.replace(/\D/g, '').includes(qDigits));
+    return e.name.toLowerCase().includes(q) || e.email.toLowerCase().includes(q)
+      || (qDigits.length >= 3 && (e.number.replace(/\D/g, '').includes(qDigits) || (!!qPhone && normPhone(e.number).includes(qPhone))));
   });
   const total = items.length;
   const shown = items.slice(0, listLimit);
@@ -2689,13 +2792,16 @@ function entryRow(e, won, locked) {
   const li = h('li', { class: cls.join(' '), dataset: { id: e.id } },
     h('span', { class: 'entry-avatar', 'aria-hidden': 'true', text: initials(e.name) }),
     h('div', { class: 'entry-main' },
-      h('span', { class: 'entry-name', text: e.name, title: e.name }),
+      h('span', { class: 'entry-name', dir: 'auto', text: e.name, title: e.name }),
       h('span', { class: 'entry-meta', text: meta })));
   const badges = h('div', { class: 'entry-badges' });
   if (e.weight > 1) badges.append(h('span', { class: 'badge badge-tickets', title: `${e.weight} tickets`, text: `×${e.weight}` }));
   if (e.status === 'won' || won.has(e.id)) badges.append(h('span', { class: 'badge badge-won', text: 'Winner' }));
   if (e.status === 'removed') badges.append(h('span', { class: 'badge badge-removed', text: 'Removed' }));
   if (e.source !== 'manual') badges.append(h('span', { class: 'badge', text: SOURCE_LABEL[e.source] }));
+  // Entries saved by an older version could lack contact details, which are now required: flag them for editing.
+  const missing = [!e.number && 'phone number', !e.email && 'email'].filter(Boolean);
+  if (missing.length) badges.append(h('span', { class: 'badge badge-missing', title: `Missing ${missing.join(' and ')}: use Edit to add it`, text: 'Needs ' + (missing.length > 1 ? 'details' : missing[0] === 'email' ? 'email' : 'phone') }));
   if (badges.childElementCount) li.append(badges);
   const actions = h('div', { class: 'entry-actions' });
   const dis = locked ? true : null;
@@ -2719,14 +2825,16 @@ function editRow(e) {
     return h('div', { class: 'field' }, h('label', { for: id, text: label }), inp, h('p', { class: 'err', id: id + 'Err', hidden: true }));
   };
   const form = h('form', { class: 'entry-edit', novalidate: true, 'aria-label': `Edit ${e.name}` },
-    mk('eName', 'Name', e.name, { type: 'text', maxlength: '80' }),
-    mk('eNumber', 'Phone number', e.number, { type: 'tel', inputmode: 'tel', maxlength: '24' }),
-    mk('eEmail', 'Email', e.email, { type: 'email', inputmode: 'email', maxlength: '254' }),
+    mk('eName', 'Name', e.name, { type: 'text', maxlength: '80', required: true }),
+    mk('eNumber', 'Phone number', e.number, { type: 'tel', inputmode: 'tel', maxlength: '24', required: true }),
+    mk('eEmail', 'Email', e.email, { type: 'email', inputmode: 'email', maxlength: '254', required: true }),
     mk('eWeight', 'Tickets', String(e.weight), { type: 'number', min: '1', max: '100', inputmode: 'numeric' }),
     h('div', { class: 'edit-actions' },
       h('button', { type: 'button', class: 'btn btn-ghost', dataset: { act: 'cancel-edit' }, text: 'Cancel' }),
-      h('button', { type: 'submit', class: 'btn btn-primary', text: 'Save' })));
+      h('button', { type: 'submit', class: 'btn btn-primary', text: 'Save', disabled: isLocked() ? true : null })));
   onFormSubmit(form, () => {
+    // The wheel is frozen during a draw, so an edit opened before SPIN is saved once the winner card is closed.
+    if (isLocked()) return toast('Finish the current draw first, then save the changes.');
     const vals = { name: $('#eName', form).value, number: $('#eNumber', form).value, email: $('#eEmail', form).value, weight: $('#eWeight', form).value };
     const res = validateFields(vals, { excludeId: e.id });
     [['name', 'eName'], ['number', 'eNumber'], ['email', 'eEmail'], ['weight', 'eWeight']].forEach(([k, id]) => showFieldError($('#' + id, form), $('#' + id + 'Err', form), res.errors[k]));
@@ -3063,8 +3171,14 @@ function renderSettings() {
   const snd = $('#btnSound');
   snd.setAttribute('aria-pressed', String(!!s.sound));
   snd.setAttribute('aria-label', s.sound ? 'Sound on — click to mute' : 'Sound off — click to unmute');
-  for (const el of $$('[data-opt="number"]')) el.textContent = s.requireNumber ? '' : '(optional)';
-  for (const el of $$('[data-opt="email"]')) el.textContent = s.requireEmail ? '' : '(optional)';
+  const lastPrize = lastLoggedPrize();
+  for (const inp of $$('[data-setting="prize"]')) inp.placeholder = lastPrize ? `Last prize: ${lastPrize}` : 'e.g. Weekend for two';
+}
+/** Prize of the most recent draw that had one (shown as a hint once the prize box is cleared for the next round). */
+function lastLoggedPrize() {
+  let best = null;
+  for (const r of state.log) if (r.prize && (!best || r.at > best.at)) best = r;
+  return best ? best.prize : '';
 }
 
 /* ---------------------------------------------------------------------
@@ -3096,13 +3210,16 @@ tabs.forEach((t, i) => {
    12. Guest sign-up (kiosk)
    --------------------------------------------------------------------- */
 let signupOpen = false;
-let suResetTimer = 0;
 let suIdleTimer = 0;
-const SU_SUCCESS_MS = 4000;
+const SIGNUP_WINDOW = 'map-lucky-draw-signup';
+// True when this window was opened straight on #signup (a guest window or tab), not the sign-up screen shown
+// over the organiser's wheel. Only then may a guest be told to close "this window".
+let signupStandalone = false;
 const signupEl = $('#signup');
 const suForm = $('#suForm');
 const suFields = { name: $('#suName'), number: $('#suNumber'), email: $('#suEmail') };
 
+/* The guest screen never shows how many people have entered, or anyone else's details. */
 function renderSignup() {
   const s = S();
   $('#suConsentText').textContent = s.consentText || DEFAULT_CONSENT;
@@ -3111,18 +3228,14 @@ function renderSignup() {
   const prize = s.prize.trim();
   $('#suPrize').hidden = !prize;
   $('#suPrizeText').textContent = prize;
-  const n = state.entries.filter(e => e.status !== 'removed').length;
-  $('#suCount').hidden = n < 1;
-  $('#suCount').textContent = n === 1 ? '1 person has entered so far' : `${n} people have entered so far`;
 }
 function resetSignupForm() {
-  clearTimeout(suResetTimer); clearTimeout(suIdleTimer);
+  clearTimeout(suIdleTimer);
   suForm.reset();
   for (const [k, inp] of Object.entries(suFields)) showFieldError(inp, $('#su' + k[0].toUpperCase() + k.slice(1) + 'Err'), '');
   showFieldError($('#suConsent'), $('#suConsentErr'), '');
   $('#suFormErr').hidden = true;
   $('#suSuccess').hidden = true;
-  $('#suTimer').classList.remove('run');
   suForm.hidden = false;
 }
 function openSignup() {
@@ -3133,6 +3246,7 @@ function openSignup() {
     return;
   }
   signupOpen = true;
+  $('#toasts').replaceChildren(); // operator messages never sit over the guest form
   resetSignupForm();
   renderSignup();
   signupEl.hidden = false;
@@ -3144,6 +3258,9 @@ function openSignup() {
 function closeSignup() {
   if (!signupOpen) return;
   signupOpen = false;
+  // The operator unlocked this window, so from now on it is a wheel window (a later sign-up opens a new one).
+  signupStandalone = false;
+  try { if (window.name === SIGNUP_WINDOW) window.name = ''; } catch (e) { /* ignore */ }
   resetSignupForm();
   signupEl.hidden = true;
   $('#app').inert = false;
@@ -3164,6 +3281,8 @@ function setSignupHash() {
   try { history.replaceState(null, '', '#signup'); } catch (e) { /* ignore */ }
 }
 async function requestSignupExit() {
+  await peerStateReady(); // without storage, a new window learns the PIN from the wheel window first
+  if (!signupOpen) return;
   const pin = S().pin;
   if (pin) {
     const v = await askConfirm({
@@ -3184,11 +3303,27 @@ function syncHash() {
   else if (!want && signupOpen) { setSignupHash(); requestSignupExit(); }
 }
 window.addEventListener('hashchange', syncHash);
-$('#btnSignup').addEventListener('click', () => {
+/**
+ * "Guest sign-up" opens the sign-up screen in a new window or tab, so a guest who closes "this window" never
+ * closes the wheel. If pop-ups are blocked (or this is a sandboxed preview) it opens over the wheel instead.
+ */
+function openGuestSignup() {
+  // An opaque-origin frame is a sandboxed preview: pop-ups are refused there, so don't even try (avoids console noise).
+  let sandboxed = false;
+  try { sandboxed = window.self !== window.top && String(window.origin) === 'null'; } catch (e) { sandboxed = true; }
+  let w = null;
+  if (!sandboxed) { try { w = window.open(location.href.split('#')[0] + '#signup', SIGNUP_WINDOW); } catch (e) { w = null; } }
+  if (w) { try { w.focus(); } catch (e) { /* ignore */ } return; }
   if (isLocked()) return toast('Finish the current draw first, then open Guest sign-up.');
   try { history.pushState(null, '', '#signup'); } catch (e) { /* sandboxed: fall through */ }
   openSignup();
-});
+}
+/** window.close() only works in a window that a script opened, such as the one "Guest sign-up" opens. */
+function canCloseWindow() {
+  if (!signupStandalone) return false;
+  try { return !!window.opener || window.name === SIGNUP_WINDOW; } catch (e) { return false; }
+}
+$('#btnSignup').addEventListener('click', openGuestSignup);
 $('#suExit').addEventListener('click', requestSignupExit);
 // Tablet keyboards: "Next" / Enter moves to the next field instead of submitting a half-filled form.
 suForm.addEventListener('keydown', ev => {
@@ -3235,27 +3370,31 @@ for (const inp of [...Object.values(suFields), $('#suConsent')]) {
 function showSignupSuccess(name) {
   clearTimeout(suIdleTimer);
   suForm.hidden = true;
-  const succ = $('#suSuccess');
-  $('#suSuccessTitle').textContent = `You’re in, ${firstName(name)}!`;
-  succ.hidden = false;
-  const timer = $('#suTimer');
-  timer.style.setProperty('--su-ms', SU_SUCCESS_MS + 'ms');
-  timer.classList.remove('run');
-  void timer.offsetWidth;
-  timer.classList.add('run');
-  $('#suNext').focus({ preventScroll: true });
+  // The confirmation stays until the guest closes the window or taps "Enter another person" (no auto-reset).
+  // Shown over the organiser's wheel (pop-ups blocked), closing the window would close the wheel, so it doesn't say so.
+  const fn = firstName(name);
+  $('#suSuccessText').replaceChildren('Thank you, ', h('strong', { dir: 'auto', text: fn }), signupStandalone ? '. You may now close this window.' : '. You’re all done — please hand the device back.');
+  $('#suClose').hidden = !canCloseWindow();
+  $('#suSuccess').hidden = false;
   window.scrollTo(0, 0);
   signupEl.scrollTop = 0;
-  clearTimeout(suResetTimer);
-  suResetTimer = setTimeout(nextGuest, SU_SUCCESS_MS);
+  $('#suSuccessTitle').focus({ preventScroll: true });
 }
 function nextGuest() {
   resetSignupForm();
   renderSignup();
   $('#suHeading').focus({ preventScroll: true });
 }
-$('#suNext').addEventListener('click', ev => { ev.stopPropagation(); nextGuest(); });
-$('#suSuccess').addEventListener('click', nextGuest);
+$('#suAnother').addEventListener('click', nextGuest);
+$('#suClose').addEventListener('click', () => {
+  try { window.close(); } catch (e) { /* ignore */ }
+  // Still open (the browser refused): don't leave a button that does nothing.
+  setTimeout(() => {
+    if (window.closed) return;
+    $('#suClose').hidden = true;
+    $('#suSuccessText').append(' You can close this tab or window yourself.');
+  }, 400);
+});
 
 /* ---------------------------------------------------------------------
    13. Event mode (fullscreen + screen wake lock)
@@ -3292,6 +3431,7 @@ async function enterEvent() {
   eventMode = true;
   document.body.classList.add('event-mode');
   $('#btnEvent').setAttribute('aria-pressed', 'true');
+  renderAll();
   scheduleMeasure();
   requestWake();
   const el = document.documentElement;
@@ -3310,6 +3450,7 @@ function exitEvent() {
   $('#btnEvent').setAttribute('aria-pressed', 'false');
   if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(() => {});
   releaseWake();
+  renderAll();
   scheduleMeasure();
 }
 document.addEventListener('fullscreenchange', () => {
@@ -3342,7 +3483,17 @@ const DEMO_PEOPLE = [
   ['Priya Sharma', 1], ['Tom Whitaker', 1], ['Amara Okafor', 2], ['Callum Reid', 1], ['Sofia Rossi', 1], ['Hannah Clarke', 3],
   ['Daniel Mensah', 1], ['Megan Hughes', 1], ['Arjun Patel', 2], ['Chloe Evans', 1], ['Kwame Asante', 1], ['Isla Morrison', 1]
 ];
-function loadDemo() {
+async function loadDemo() {
+  // One slip during a live event must not put fictional people into a real draw.
+  const real = state.entries.filter(e => e.source !== 'demo' && e.status === 'active').length;
+  if (real) {
+    const ok = await askConfirm({
+      title: 'Add demo entries to this draw?',
+      text: `${plural(real, 'real entry', 'real entries')} ${real === 1 ? 'is' : 'are'} on the wheel. The 12 fictional demo people would join the draw alongside them. “Clear demo entries” removes them again.`,
+      ok: 'Add demo entries'
+    });
+    if (!ok) return;
+  }
   const recs = DEMO_PEOPLE.map(([n, w], i) => ({
     name: `Demo — ${n}`, number: `07700 900${String(101 + i * 37).padStart(3, '0')}`,
     email: `${n.toLowerCase().replace(/[^a-z]+/g, '.')}@example.com`, weight: w, consent: true
@@ -3350,15 +3501,27 @@ function loadDemo() {
   const res = importRecords(recs, 'demo');
   toast(res.added ? `Loaded ${res.added} demo entries${res.skipped ? ` (${res.skipped} already there)` : ''}. Press SPIN to try it.` : 'The demo entries are already on the wheel.');
 }
+/** Removes the demo people and their draws; if no real draws are left, the next draw is Round 1 again. */
 async function clearDemo() {
   const demo = state.entries.filter(e => e.source === 'demo');
   if (!demo.length) return;
-  const ok = await askConfirm({ title: 'Clear demo entries?', text: `Removes the ${demo.length} demo entries. Real entries are kept.`, ok: 'Clear demo entries', danger: true });
+  const ids = new Set(demo.map(e => e.id));
+  const realIds = new Set(state.entries.filter(e => e.source !== 'demo').map(e => e.id));
+  // Also draws of demo people whose entry was deleted since (their log name still says "Demo — …").
+  const demoDraws = state.log.filter(r => ids.has(r.entryId) || (!realIds.has(r.entryId) && /^demo\s*[—–-]/i.test(r.name)));
+  const restart = state.log.length === demoDraws.length && state.meta.round > 0;
+  const text = `Removes the ${demo.length} demo entries${demoDraws.length ? ` and their ${plural(demoDraws.length, 'draw')} from the winner log` : ''}. `
+    + `Real entries${state.log.length > demoDraws.length ? ' and draws' : ''} are kept.${restart ? ' The next draw will be Round 1.' : ''}`;
+  const ok = await askConfirm({ title: 'Clear demo entries?', text, ok: 'Clear demo entries', danger: true });
   if (!ok) return;
+  const drawIds = new Set(demoDraws.map(r => r.id));
   for (const e of demo) tombstone(e.id);
-  state.entries = state.entries.filter(e => e.source !== 'demo');
+  for (const r of demoDraws) tombstone(r.id);
+  state.entries = state.entries.filter(e => !ids.has(e.id));
+  state.log = state.log.filter(r => !drawIds.has(r.id));
+  if (restart) state.meta = { ...state.meta, round: 0, updatedAt: stamp() };
   commit();
-  toast('Demo entries cleared.');
+  toast(demoDraws.length ? `Demo entries and their draws cleared.${restart ? ' The next draw is Round 1.' : ''}` : 'Demo entries cleared.');
 }
 
 /* ---------------------------------------------------------------------
@@ -3407,17 +3570,19 @@ document.addEventListener('click', async ev => {
     }
     case 'clear-log': {
       if (!state.log.length) return;
-      const ok = await askConfirm({ title: 'Clear the winner log?', text: 'All winner and no-show records are deleted. Entries stay as they are.', ok: 'Clear log', danger: true });
+      const ok = await askConfirm({ title: 'Clear the winner log?', text: 'All winner and no-show records are deleted, and the next draw will be Round 1. Entries stay as they are.', ok: 'Clear log', danger: true });
       if (!ok) return;
       for (const r of state.log) tombstone(r.id);
       state.log = [];
+      state.meta = { ...state.meta, round: 0, updatedAt: stamp() };
       commit();
+      toast('Winner log cleared. The next draw is Round 1.');
       break;
     }
     case 'reset-round': {
       const ok = await askConfirm({ title: 'Reset the round counter?', text: 'The next draw will be Round 1. The winner log is not changed.', ok: 'Reset' });
       if (!ok) return;
-      state.meta = { round: 0, updatedAt: stamp() };
+      state.meta = { ...state.meta, round: 0, updatedAt: stamp() };
       commit();
       toast('Round counter reset.');
       break;
@@ -3434,16 +3599,7 @@ document.addEventListener('click', async ev => {
       toast('All data deleted.');
       break;
     }
-    case 'open-signup-window': {
-      const url = location.href.split('#')[0] + '#signup';
-      let w = null;
-      // An opaque-origin frame is a sandboxed preview: pop-ups are refused there, so don't even try (avoids console noise).
-      let sandboxed = false;
-      try { sandboxed = window.self !== window.top && String(window.origin) === 'null'; } catch (e) { sandboxed = true; }
-      if (!sandboxed) { try { w = window.open(url, 'map-lucky-draw-signup'); } catch (e) { w = null; } }
-      if (!w) toast('Pop-up blocked. Open this page in a new window and add #signup to the address.', { timeout: 7000 });
-      break;
-    }
+    case 'open-signup-window': openGuestSignup(); break;
     default: break;
   }
 });
@@ -3465,26 +3621,25 @@ function renderAll() {
   drawWheel();
   const active = activeEntries();
   const winners = state.log.filter(r => r.type === 'Winner').length;
-  const onWheel = locked ? wheelEntries.length : active.length;
+  // Counts are for the organiser's panel only; the stage, event mode and sign-up screen never show them.
   const pc = $('#panelCounts');
   pc.replaceChildren(h('span', { class: 'n', text: String(active.length) }), ' on the wheel · ', h('span', { class: 'n', text: String(winners) }), winners === 1 ? ' winner' : ' winners');
   $('#countEntries').textContent = String(active.length);
   $('#countWinners').textContent = String(winners);
-  // Stage status line + spin availability
-  const queued = locked ? active.filter(e => !wheelEntries.some(w => w.id === e.id)).length : 0;
+  // Stage status line (audience-facing): the round and its prize only, no entrant or ticket counts.
+  const empty = wheelEntries.length === 0 && !locked;
+  const prize = s.prize.trim();
+  const queued = locked && active.some(e => !wheelEntries.some(w => w.id === e.id));
   const info = $('#wheelStatus');
   info.replaceChildren();
-  // Total tickets make weighted draws transparent to the audience ("300 on the wheel · 600 tickets").
-  let tickets = 0;
-  for (const e of (locked ? wheelEntries : active)) tickets += e.weight;
-  // Each part stays on one line, so a narrow column wraps at the separators.
-  const parts = onWheel ? [`${onWheel} on the wheel`, tickets > onWheel ? `${tickets} tickets` : '', `Round ${nextRound}`] : ['The wheel is empty'];
-  parts.filter(Boolean).forEach((t, i) => { if (i) info.append(' · '); info.append(h('span', { class: 'si', text: t })); });
-  if (queued) info.append(' · ', h('span', { class: 'si queued', text: `+${queued} joining after this draw` }));
+  // In event mode the prize display below already reads "Round N prize", so the line then only carries notes.
+  const parts = empty ? ['The wheel is empty'] : (eventMode && prize) ? [] : [`Round ${nextRound}`, eventMode ? '' : prize];
+  // Each part stays on one line (the prize may wrap), so a narrow column wraps at the separators.
+  parts.filter(Boolean).forEach((t, i) => { if (i) info.append(' · '); info.append(h('span', { class: i ? 'si si-prize' : 'si', text: t })); });
+  if (queued) info.append(info.childNodes.length ? ' · ' : '', h('span', { class: 'si queued', text: 'New entries join after this draw' }));
   const pd = $('#prizeDisplay');
   pd.replaceChildren();
-  if (s.prize.trim()) pd.append(h('span', { class: 'eyebrow', text: `Round ${nextRound} prize` }), h('strong', { text: s.prize.trim() }));
-  const empty = wheelEntries.length === 0 && !locked;
+  if (prize) pd.append(h('span', { class: 'eyebrow', text: `Round ${nextRound} prize` }), h('strong', { text: prize }));
   wheelEl.classList.toggle('is-empty', empty);
   wheelEl.classList.toggle('is-locked', locked);
   $('#wheelEmpty').hidden = !empty;
@@ -3492,6 +3647,7 @@ function renderAll() {
   $('#spinBtn').setAttribute('aria-label', spinning ? 'Spinning…' : 'SPIN');
   wheelEl.setAttribute('aria-disabled', String(locked || empty));
   for (const b of $$('[data-lock]')) b.disabled = locked;
+  for (const b of $$('.entry-edit button[type="submit"]')) b.disabled = locked; // saved after the draw (the wheel is frozen)
   const hasDemo = state.entries.some(e => e.source === 'demo');
   for (const b of $$('[data-action="demo-clear"]')) b.hidden = !hasDemo;
   renderSettings();
@@ -3507,6 +3663,11 @@ function renderAll() {
    15. Input wiring, init & test hooks
    --------------------------------------------------------------------- */
 $('#spinBtn').addEventListener('click', () => spin());
+// Holding Enter on the winner card: the first press applies the action and focus moves to SPIN, where the key's
+// auto-repeat would click it. Repeats, and presses just after the card closed, never start the next draw.
+$('#spinBtn').addEventListener('keydown', ev => {
+  if ((ev.key === 'Enter' || ev.key === ' ') && (ev.repeat || performance.now() - lastWinnerClose < 400)) ev.preventDefault();
+});
 wheelEl.addEventListener('click', () => {
   if (isLocked()) return;
   if (!wheelEntries.length) return toast('Add entries to start.');
@@ -3522,7 +3683,7 @@ document.addEventListener('keydown', ev => {
   const onControl = t !== wheelEl && t.closest('button, a[href], summary, [role="tab"], label, #panel');
   if ((ev.key === ' ' || ev.key === 'Enter') && !onControl) {
     ev.preventDefault();
-    if (!ev.repeat && !isLocked()) spin();
+    if (!ev.repeat && !isLocked() && performance.now() - lastWinnerClose >= 400) spin();
     return;
   }
   if ((ev.key === 'f' || ev.key === 'F') && !ev.repeat) {
@@ -3546,8 +3707,10 @@ function init() {
   rebuildWheel();
   applyRotation();
   renderAll();
-  if (location.hash === '#signup') openSignup();
-  else {
+  if (location.hash === '#signup') {
+    signupStandalone = true;
+    openSignup();
+  } else if (!restorePendingWinner()) {
     const seen = lsGet(GUIDE_KEY);
     if (!seen) setTimeout(() => { if (!signupOpen && !anyModalOpen()) openHelp(); }, 250);
   }
@@ -3557,7 +3720,7 @@ window.MAPDraw = Object.freeze({
   getState() {
     const s = JSON.parse(JSON.stringify(state));
     return {
-      entries: s.entries, log: s.log, settings: s.settings, round: s.meta.round,
+      entries: s.entries, log: s.log, settings: s.settings, round: s.meta.round, pending: s.meta.pending,
       active: s.entries.filter(e => e.status === 'active'),
       wheel: wheelEntries.map(e => e.id), spinning, winnerOpen, eventMode, signupOpen, storage: storageOK
     };

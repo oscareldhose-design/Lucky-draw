@@ -2,7 +2,7 @@
 
 A prize wheel for events and stands, in MAP's brand (**MAP — Your way home**). It is modelled on
 [RepBud's free trade-show prize wheel](https://repbud.app/tools/prize-wheel). Entrants give their
-**Name**, **Phone number** and **Email**.
+**Name**, **Phone number** and **Email**, and all three are required to enter the draw.
 
 Everything is in one self-contained file, `index.html`. There is no build step, and it has no
 accounts, adverts, tracking or network requests.
@@ -18,38 +18,58 @@ accounts, adverts, tracking or network requests.
 The first visit opens a short **How it works** guide. You can reopen it any time with the **?**
 button. To try the wheel straight away, press **Load 12 demo entries**. These are fictional people
 with `@example.com` addresses and Ofcom drama-range numbers. **Clear demo entries** removes only
-those.
+those, together with their draws in the winner log. If no real draws are left, the next draw is
+Round 1 again. The **Demo entries** button asks first if real people are already on the wheel.
 
 ## Using it at an event
 
 **Adding people** (Entries tab)
-- **Add an entry:** type a name, phone number and email, and optionally a number of tickets. Name,
-  phone and email are required by default; you can change this in Settings.
+- **Add an entry:** type a name, phone number and email, and optionally a number of tickets. All
+  three details are always required, and the error message says which one is missing or invalid.
 - **Bulk add:** paste one person per line as `Name, Phone number, Email`, optionally with a fourth
   column for tickets. Commas and tabs both work, so you can paste straight from Excel or Google
   Sheets.
 - **Import CSV:** header rows such as *Name / First name + Last name*, *Phone / Mobile* and
-  *Email address* are recognised. Use **CSV template** for a ready-made file. Bulk imports need only
-  a name and report how many rows were added and skipped.
+  *Email address* are recognised. Use **CSV template** for a ready-made file.
+- **Bulk paste and CSV import** follow the same rule as the forms: every row needs a name, a valid
+  phone number and a valid email. Other rows are skipped, and the report says why, for example
+  *"Added 40, skipped 3: 2 missing a phone number, 1 invalid email."*
 - **Duplicates:** by default, the same phone number or email can't be entered twice. `07…` and
   `+44 7…` count as the same number, and email case is ignored.
 - **The list:** search, filter (On wheel / Winners / All), edit, remove (with **Undo**) and
-  **Return to wheel**. You can also shuffle, sort A–Z or clear all.
+  **Return to wheel**. You can also shuffle, sort A–Z or clear all. Searching for a phone number
+  finds it however it was typed (`07…` or `+44 7…`). Entries saved by an older version without a
+  phone number or email are marked *Needs details*; use **Edit** to add them.
 
 **Guest sign-up**
-- **Guest sign-up** in the header opens a full-screen form for guests. You can also open it directly
-  at `index.html#signup`.
-- Guests must tick the consent box. The marketing opt-in is separate, optional and unticked. After a
-  guest enters, the screen shows *"You're in, NAME!"* and resets itself after about 4 seconds.
-- **Second window:** open the sign-up in another window or tab of the same browser, for example with
-  **Guest sign-up in a new window** at the bottom of the Entries tab. Place it on a second screen.
-  New entries appear on the wheel within a second.
+- **Guest sign-up** in the header opens a full-screen form for guests in a **new window or tab**, so
+  a guest who closes it never closes the wheel. You can also open it directly at
+  `index.html#signup`. If the browser blocks the new window, the form opens over the wheel instead.
+- Above the form, guests see this notice: *"Please ensure that all details are correct as we will
+  message a code to your number to confirm you have given the correct details which is necessary to
+  claim your prize on stage."*
+- Guests enter their name, phone number and email (all required) and must tick the consent box. The
+  marketing opt-in is separate, optional and unticked.
+- After a guest enters, a confirmation screen says *"You're entered into the raffle!"* and
+  *"Thank you, NAME. You may now close this window."* It stays until the guest closes the window;
+  it does not reset itself. A **Close window** button appears when the browser allows the page to
+  close itself (the window that **Guest sign-up** opens). On a shared tablet, the small
+  **Enter another person** link brings back a blank form. When the form was shown over the wheel,
+  the confirmation asks the guest to hand the device back instead of closing the window.
+- The guest screen never shows how many people have entered, and operator messages never appear
+  over it.
+- New entries appear on the wheel within a second, including when the sign-up window is on a second
+  screen.
 - The small **Exit** button asks for the operator PIN if you have set one in Settings. Otherwise it
   asks you to confirm.
 
 **Spinning**
 - Press **SPIN**, tap the wheel, or press **Space**. Set the prize for each round in the box beside
-  the SPIN button.
+  the SPIN button. Once a winner is confirmed the box is cleared, so a prize never carries into the
+  next round by mistake. The box then shows the last prize as a hint. After a no-show the redraw
+  keeps the same prize.
+- The line under the wheel shows only the round and its prize. It never shows how many people or
+  tickets are on the wheel; those counts are only in the operator's Entries panel.
 - The wheel ticks as it turns and plays a fanfare when it lands. It then highlights the winning
   segment before the winner card opens.
 - People who sign up during a spin join the wheel once that draw is finished.
@@ -60,10 +80,14 @@ those.
 - **No-show — draw again:** logs the draw as a no-show and removes that person from the wheel. It
   then re-spins for the same round and prize.
 - Every draw goes into the **Winners** tab with its round, prize, type and time.
+- If the page is reloaded or closed while a winner card is open, the card reopens when the page comes
+  back. With *Remove winners after they win* on, the winner is off the wheel from the moment it
+  lands, so they can't be drawn again.
+- **Clear log** in the Winners tab also restarts the rounds at Round 1.
 
 **Event mode**
 - Press **Event mode** or **F** to go full screen and keep the screen awake. Only the logo, title,
-  prize, wheel and SPIN button are shown.
+  round, prize, wheel and SPIN button are shown, with no entrant counts.
 - Leave with **Esc** or **Exit event mode**.
 
 **Exports**
@@ -80,8 +104,8 @@ those.
   (`crypto.getRandomValues`). Rejection sampling removes modulo bias. The wheel animation is then
   worked out to land on that person, and the page checks that the pointer agrees.
 - **Tickets** set the weights. Someone with 3 tickets has three times the chance of someone with 1,
-  and a segment's size matches its share. The stage shows the totals, for example
-  *"300 on the wheel · 600 tickets"*.
+  and a segment's size matches its share. The Entries panel shows how many people are on the wheel.
+  The audience-facing screens don't show entrant counts.
 
 ## Privacy and data
 
@@ -95,7 +119,8 @@ those.
   Settings.
 - **Settings → Delete ALL data** wipes everything.
 - If the browser blocks storage (for example some private windows or embedded previews), the wheel
-  still works for that session and shows a warning. Export before closing the page.
+  still works for that session and shows a warning. A sign-up window opened from it still gets the
+  current entries, PIN and wording from the wheel window. Export before closing the page.
 
 ## Keyboard shortcuts
 
