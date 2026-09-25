@@ -55,9 +55,10 @@ Round 1 again. The **Demo entries** button asks first if real people are already
 - After a guest enters, a confirmation screen says *"You're entered into the raffle!"* and
   *"Thank you, NAME. You may now close this window."* It stays until the guest closes the window;
   it does not reset itself. A **Close window** button appears when the browser allows the page to
-  close itself (the window that **Guest sign-up** opens). On a shared tablet, the small
-  **Enter another person** link brings back a blank form. When the form was shown over the wheel,
-  the confirmation asks the guest to hand the device back instead of closing the window.
+  close itself (the window that **Guest sign-up** opens). There is no way back to a blank form from
+  the confirmation; the organiser opens **Guest sign-up** again for the next person. When the form
+  was shown over the wheel, the confirmation asks the guest to hand the device back instead.
+- Guests can't enter without ticking the **"I agree that MAP may store my details…"** box.
 - The guest screen never shows how many people have entered, and operator messages never appear
   over it.
 - New entries appear on the wheel within a second, including when the sign-up window is on a second

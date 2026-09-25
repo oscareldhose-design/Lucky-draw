@@ -587,8 +587,6 @@ dialog::backdrop { background: var(--backdrop); backdrop-filter: blur(3px); }
 .su-success-sub { font-size: 22px; line-height: 1.35; color: var(--text); font-weight: 400; max-width: 30ch; overflow-wrap: anywhere; }
 .su-success-sub strong { color: var(--heading); }
 .su-success .btn { min-width: min(280px, 100%); }
-.su-another { font-size: 15px; font-weight: 400; color: var(--text-2); margin-top: 6px; }
-.su-another:hover, .su-another:focus-visible { color: var(--accent-ink); }
 @media (max-width: 900px), (max-aspect-ratio: 1/1) {
   /* max-content: the brand band is overflow:hidden (for its watermark), so an "auto" row could collapse it */
   .signup { grid-template-columns: minmax(0, 1fr); grid-template-rows: max-content 1fr; align-content: start; }
@@ -1093,7 +1091,6 @@ body.event-mode .toasts { top: 16px; left: 16px; right: auto; bottom: auto; tran
         <h2 class="su-success-title" id="suSuccessTitle" tabindex="-1">You’re entered into the raffle!</h2>
         <p class="su-success-sub" id="suSuccessText">Thank you. You may now close this window.</p>
         <button type="button" class="btn btn-primary btn-lg" id="suClose" hidden>Close window</button>
-        <button type="button" class="link-btn su-another" id="suAnother">Enter another person</button>
       </div>
     </div>
   </div>
@@ -3354,7 +3351,7 @@ onFormSubmit(suForm, () => {
   showFieldError(suFields.number, $('#suNumberErr'), res.errors.number);
   showFieldError(suFields.email, $('#suEmailErr'), res.errors.email);
   const consent = $('#suConsent').checked;
-  showFieldError($('#suConsent'), $('#suConsentErr'), consent ? '' : 'Please tick the box to agree before entering.');
+  showFieldError($('#suConsent'), $('#suConsentErr'), consent ? '' : 'You must tick “I agree” to enter the draw.');
   const fe = $('#suFormErr');
   fe.hidden = !dupMsg;
   fe.textContent = dupMsg;
@@ -3380,7 +3377,7 @@ for (const inp of [...Object.values(suFields), $('#suConsent')]) {
 function showSignupSuccess(name) {
   clearTimeout(suIdleTimer);
   suForm.hidden = true;
-  // The confirmation stays until the guest closes the window or taps "Enter another person" (no auto-reset).
+  // The confirmation stays until the guest closes the window (no auto-reset, no way back to a blank form).
   // Shown over the organiser's wheel (pop-ups blocked), closing the window would close the wheel, so it doesn't say so.
   const fn = firstName(name);
   $('#suSuccessText').replaceChildren('Thank you, ', h('strong', { dir: 'auto', text: fn }), signupStandalone ? '. You may now close this window.' : '. You’re all done — please hand the device back.');
@@ -3390,12 +3387,6 @@ function showSignupSuccess(name) {
   signupEl.scrollTop = 0;
   $('#suSuccessTitle').focus({ preventScroll: true });
 }
-function nextGuest() {
-  resetSignupForm();
-  renderSignup();
-  $('#suHeading').focus({ preventScroll: true });
-}
-$('#suAnother').addEventListener('click', nextGuest);
 $('#suClose').addEventListener('click', () => {
   try { window.close(); } catch (e) { /* ignore */ }
   // Still open (the browser refused): don't leave a button that does nothing.
