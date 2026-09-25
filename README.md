@@ -94,10 +94,9 @@ Round 1 again. The **Demo entries** button asks first if real people are already
 - Leave with **Esc** or **Exit event mode**.
 
 **Exports**
-- **Download Excel (.xlsx):** a real workbook with two sheets:
-  - **Entrants:** everyone who entered, with contact details, tickets, status, the rounds they won,
-    source, consent and marketing opt-in, and times.
-  - **Winners:** the winner log.
+- **Download Excel (.xlsx):** one sheet, **Entrants**, with just **Name, Phone number and Email** for
+  everyone who entered (on the wheel, winners and removed; demo entries left out). Phone numbers keep
+  their leading 0 or +44. The winner log stays in the app's **Winners** tab.
   This button is in the panel header, the Entries tab and the Winners tab.
 - **CSV:** the winner log and the entrant list, as UTF-8 files that are safe to open in Excel.
 

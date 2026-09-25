@@ -1158,7 +1158,7 @@ body.event-mode .toasts { top: 16px; left: 16px; right: auto; bottom: auto; tran
       </li>
       <li class="help-step">
         <svg viewBox="0 0 76 76" aria-hidden="true"><rect x="10" y="8" width="46" height="58" rx="6" fill="#fff" stroke="#6e006e" stroke-width="3"/><path d="M10 22h46M10 36h46M10 50h46M27 8v58" stroke="#e7b3e7" stroke-width="2.5"/><rect x="10" y="8" width="46" height="14" rx="6" fill="#6e006e"/><circle cx="56" cy="56" r="14" fill="#a308a3"/><path d="M56 48v14M50 56l6 6 6-6" stroke="#fff" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        <div><h3><span class="num">5</span>Download everyone’s details</h3><p><b>Download Excel (.xlsx)</b> gives you a workbook with every entrant and the winner log. CSV exports are in the <b>Entries</b> and <b>Winners</b> tabs.</p></div>
+        <div><h3><span class="num">5</span>Download everyone’s details</h3><p><b>Download Excel (.xlsx)</b> gives you a spreadsheet of everyone who entered: their name, phone number and email. CSV exports are in the <b>Entries</b> and <b>Winners</b> tabs.</p></div>
       </li>
     </ol>
     <div class="modal-actions">
@@ -3038,16 +3038,11 @@ function sheetXml(header, rows, widths, selected) {
     + '<pageMargins left="0.7" right="0.7" top="0.75" bottom="0.75" header="0.3" footer="0.3"/></worksheet>';
   return xml;
 }
+/** The Excel file holds exactly what the client asked for: everyone who entered (any status, demo people left
+    out), with only their Name, Phone number and Email, on a single "Entrants" sheet. */
 function buildXlsx() {
-  const wonRounds = new Map();
-  for (const r of logChrono()) if (r.type === 'Winner') { if (!wonRounds.has(r.entryId)) wonRounds.set(r.entryId, []); wonRounds.get(r.entryId).push(r.round); }
-  const eHead = ['Name', 'Phone number', 'Email', 'Tickets', 'Status', 'Won in round(s)', 'Source', 'Consent', 'Marketing opt-in', 'Consent time', 'Entered at'];
-  const eRows = state.entries.map(e => [
-    e.name, e.number, e.email, { t: 'n', v: e.weight }, STATUS_LABEL[e.status], (wonRounds.get(e.id) || []).join(', '),
-    SOURCE_LABEL[e.source], e.consent ? 'Yes' : 'No', e.marketing ? 'Yes' : 'No', { t: 'd', v: excelSerial(e.consentAt) }, { t: 'd', v: excelSerial(e.createdAt) }
-  ]);
-  const wHead = ['Round', 'Prize', 'Name', 'Phone number', 'Email', 'Type', 'Time'];
-  const wRows = logChrono().map(r => [{ t: 'n', v: r.round }, r.prize, r.name, r.number, r.email, r.type, { t: 'd', v: excelSerial(r.at) }]);
+  const eHead = ['Name', 'Phone number', 'Email'];
+  const eRows = state.entries.filter(e => e.source !== 'demo').map(e => [e.name, e.number, e.email]);
   const nowW3C = new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
   const X = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n';
   const files = [
@@ -3056,7 +3051,6 @@ function buildXlsx() {
       + '<Default Extension="xml" ContentType="application/xml"/>'
       + '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>'
       + '<Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>'
-      + '<Override PartName="/xl/worksheets/sheet2.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>'
       + '<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>'
       + '<Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/>'
       + '<Override PartName="/docProps/app.xml" ContentType="application/vnd.openxmlformats-officedocument.extended-properties+xml"/>'
@@ -3070,16 +3064,14 @@ function buildXlsx() {
       + `<dc:title>${xmlEsc(S().title || 'MAP Lucky Draw')}</dc:title><dc:creator>MAP Lucky Draw</dc:creator>`
       + `<dcterms:created xsi:type="dcterms:W3CDTF">${nowW3C}</dcterms:created><dcterms:modified xsi:type="dcterms:W3CDTF">${nowW3C}</dcterms:modified>`
       + '</cp:coreProperties>' },
-    { name: 'docProps/app.xml', data: X + '<Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties" xmlns:vt="http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes"><Application>MAP Lucky Draw</Application><DocSecurity>0</DocSecurity><ScaleCrop>false</ScaleCrop><HeadingPairs><vt:vector size="2" baseType="variant"><vt:variant><vt:lpstr>Worksheets</vt:lpstr></vt:variant><vt:variant><vt:i4>2</vt:i4></vt:variant></vt:vector></HeadingPairs><TitlesOfParts><vt:vector size="2" baseType="lpstr"><vt:lpstr>Entrants</vt:lpstr><vt:lpstr>Winners</vt:lpstr></vt:vector></TitlesOfParts><AppVersion>16.0300</AppVersion></Properties>' },
+    { name: 'docProps/app.xml', data: X + '<Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties" xmlns:vt="http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes"><Application>MAP Lucky Draw</Application><DocSecurity>0</DocSecurity><ScaleCrop>false</ScaleCrop><HeadingPairs><vt:vector size="2" baseType="variant"><vt:variant><vt:lpstr>Worksheets</vt:lpstr></vt:variant><vt:variant><vt:i4>1</vt:i4></vt:variant></vt:vector></HeadingPairs><TitlesOfParts><vt:vector size="1" baseType="lpstr"><vt:lpstr>Entrants</vt:lpstr></vt:vector></TitlesOfParts><AppVersion>16.0300</AppVersion></Properties>' },
     { name: 'xl/workbook.xml', data: X + '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
       + '<bookViews><workbookView xWindow="0" yWindow="0" windowWidth="28800" windowHeight="16000" activeTab="0"/></bookViews>'
-      + '<sheets><sheet name="Entrants" sheetId="1" r:id="rId1"/><sheet name="Winners" sheetId="2" r:id="rId2"/></sheets>'
-      + `<definedNames><definedName name="_xlnm._FilterDatabase" localSheetId="0" hidden="1">Entrants!$A$1:$K$${eRows.length + 1}</definedName>`
-      + `<definedName name="_xlnm._FilterDatabase" localSheetId="1" hidden="1">Winners!$A$1:$G$${wRows.length + 1}</definedName></definedNames>`
+      + '<sheets><sheet name="Entrants" sheetId="1" r:id="rId1"/></sheets>'
+      + `<definedNames><definedName name="_xlnm._FilterDatabase" localSheetId="0" hidden="1">Entrants!$A$1:$C$${eRows.length + 1}</definedName></definedNames>`
       + '</workbook>' },
     { name: 'xl/_rels/workbook.xml.rels', data: X + '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
       + '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>'
-      + '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet2.xml"/>'
       + '<Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>'
       + '</Relationships>' },
     { name: 'xl/styles.xml', data: X + '<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
@@ -3093,8 +3085,7 @@ function buildXlsx() {
       + '<xf numFmtId="164" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/></cellXfs>'
       + '<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles><dxfs count="0"/><tableStyles count="0"/>'
       + '</styleSheet>' },
-    { name: 'xl/worksheets/sheet1.xml', data: sheetXml(eHead, eRows, [30, 18, 34, 9, 11, 16, 10, 10, 17, 18, 18], true) },
-    { name: 'xl/worksheets/sheet2.xml', data: sheetXml(wHead, wRows, [8, 26, 30, 18, 34, 10, 18], false) }
+    { name: 'xl/worksheets/sheet1.xml', data: sheetXml(eHead, eRows, [32, 20, 38], true) }
   ];
   return zipStore(files);
 }
