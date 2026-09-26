@@ -1029,6 +1029,7 @@ body.event-mode .srv-banner { display: none; }
           </div>
           <label class="switch-row" for="psOpen"><span class="sw-text">Sign-ups open<small>Turn off to stop new phone sign-ups. Guests then see “Entries are now closed.”</small></span><input class="switch" id="psOpen" type="checkbox" role="switch" checked></label>
           <div class="btn-row">
+            <button type="button" class="btn btn-secondary" id="psXlsx"><svg class="ic ic-sm" aria-hidden="true"><use href="#i-download"/></svg>Download Excel from server</button>
             <button type="button" class="btn btn-secondary" id="psResync"><svg class="ic ic-sm" aria-hidden="true"><use href="#i-undo"/></svg>Re-sync all</button>
             <button type="button" class="btn btn-ghost" id="psLogout"><svg class="ic ic-sm" aria-hidden="true"><use href="#i-lock"/></svg>Log out</button>
           </div>
@@ -4351,6 +4352,26 @@ $('#psOpen').addEventListener('change', async ev => {
   sw.disabled = false;
   if (!r.ok) { sw.checked = sync.open !== false; return; }
   toast(want ? 'Sign-ups are open: guests can enter from their phones.' : 'Sign-ups are closed: guests now see “Entries are now closed.”');
+});
+/* The server rebuilds an Excel backup (Name | Phone number | Email) after every phone sign-up; this fetches it. */
+$('#psXlsx').addEventListener('click', async ev => {
+  const b = ev.currentTarget;
+  if (!sync.on) return;
+  b.disabled = true;
+  const url = new URL(API_URL);
+  url.searchParams.set('action', 'exportXlsx');
+  let res = null, bytes = null;
+  try {
+    res = await fetch(url.href, { credentials: 'same-origin', cache: 'no-store' });
+    if (res.ok) bytes = await res.arrayBuffer();
+  } catch (e) { res = null; }
+  b.disabled = false;
+  if (res && res.status === 401) { requireLogin(); return; }
+  if (!bytes || new Uint8Array(bytes.slice(0, 2))[0] !== 0x50) {
+    toast('Couldn’t download the Excel backup from the server. Try again in a moment.', { type: 'error' });
+    return;
+  }
+  download(`map-lucky-draw-sign-ups-${dateStamp()}.xlsx`, new Blob([bytes], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
 });
 $('#psResync').addEventListener('click', async ev => {
   const b = ev.currentTarget;

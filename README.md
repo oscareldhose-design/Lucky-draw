@@ -21,7 +21,11 @@ accounts, adverts, tracking or network requests.
 3. QR code for guests: `https://themaap.co.uk/draw/`. They get only the sign-up form.
 4. On your laptop open `https://themaap.co.uk/draw/#wheel` and log in with that password. New
    sign-ups appear on the wheel within about 2 seconds; **Download Excel (.xlsx)** includes them.
-5. Sign-ups are stored in the `data` folder that `api.php` creates next to itself. **Settings →
+5. Every phone sign-up is saved on your server straight away, and the server also keeps an Excel
+   backup (Name | Phone number | Email) that is updated after each one. Download it from **Settings →
+   Phone sign-ups → Download Excel from server** (you must be logged in; it can't be downloaded
+   any other way).
+6. Sign-ups are stored in the `data` folder that `api.php` creates next to itself. **Settings →
    Phone sign-ups → Clear all sign-ups on the server** (or deleting the folder) wipes them.
 
 The first visit opens a short **How it works** guide. You can reopen it any time with the **?**

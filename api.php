@@ -22,7 +22,7 @@ const MAX_ENTRIES = 2000;
 const DATA_DIR = __DIR__ . '/data';            // created automatically
 
 /* ---- Advanced settings (normally leave these as they are) ------------------------------------ */
-const SUBMIT_LIMIT_PER_MINUTE = 120; // sign-ups per minute from one IP address (a venue may share one Wi-Fi IP)
+const SUBMIT_LIMIT_PER_MINUTE = 300; // sign-ups per minute from one IP address (a whole venue may share one Wi-Fi IP)
 const LOGIN_MAX_FAILS = 5;           // wrong passwords from one IP address...
 const LOGIN_LOCK_SECONDS = 900;      // ...within 15 minutes lock logins from that address for 15 minutes
 const SESSION_HOURS = 12;            // the organiser stays logged in for this long
@@ -174,6 +174,7 @@ function mld_main()
         'entries' => ['GET', 'mld_action_entries'],
         'setConfig' => ['POST', 'mld_action_set_config'],
         'clear' => ['POST', 'mld_action_clear'],
+        'exportXlsx' => ['GET', 'mld_action_export_xlsx'],
     ];
     if (!isset($routes[$action])) {
         mld_fail(404, 'not_found', 'Unknown action.');
@@ -284,6 +285,8 @@ function mld_action_submit()
         $state['seq'] = $seq;
         $state['count'] = count($rows) + 1;
         mld_state_write($state);
+        $rows[] = $entry;
+        mld_backup_write($rows); // the Excel backup always includes this sign-up
         return [201, ['ok' => true, 'entryId' => $entry['entryId']]];
     });
     mld_send($result[0], $result[1]);
@@ -523,9 +526,146 @@ function mld_action_clear()
         $state['count'] = 0;
         mld_state_write($state);         // seq keeps counting up, so old numbers are never reused
         mld_write_atomic(mld_path('entries.php'), MLD_GUARD . "\n");
+        mld_backup_write([]);
         return $state['epoch'];
     });
     mld_send(200, ['ok' => true, 'epoch' => $epoch]);
+}
+
+/* ---- Excel backup ------------------------------------------------------------------------------- */
+
+/**
+ * GET exportXlsx (organiser only): the Excel backup of every phone sign-up (Name | Phone number | Email),
+ * rebuilt after each sign-up. It lives in data/backup-xlsx.php behind the same guard line as the other
+ * data files, so it can only be downloaded through here, after logging in.
+ */
+function mld_action_export_xlsx()
+{
+    mld_require_admin();
+    $bytes = mld_locked(false, function () {
+        return mld_backup_read();
+    });
+    if ($bytes === null) { // missing or damaged: rebuild it from the sign-ups
+        $bytes = mld_locked(true, function () {
+            $raw = '';
+            return mld_backup_write(mld_entries_read($raw));
+        });
+    }
+    if (!headers_sent()) {
+        header_remove('X-Powered-By');
+        http_response_code(200);
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header('Content-Disposition: attachment; filename="map-lucky-draw-sign-ups-' . gmdate('Y-m-d') . '.xlsx"');
+        header('Content-Length: ' . strlen($bytes));
+        header('X-Content-Type-Options: nosniff');
+        header('Cache-Control: no-store');
+        header('Referrer-Policy: no-referrer');
+        header('X-Frame-Options: DENY');
+    }
+    echo $bytes;
+    exit;
+}
+
+/** The stored backup's bytes, or null when it is missing or damaged. Call with a lock held. */
+function mld_backup_read()
+{
+    $raw = @file_get_contents(mld_path('backup-xlsx.php'));
+    if (!is_string($raw) || strncmp($raw, MLD_GUARD . "\n", strlen(MLD_GUARD) + 1) !== 0) {
+        return null;
+    }
+    $bytes = base64_decode(substr($raw, strlen(MLD_GUARD) + 1), true);
+    return (is_string($bytes) && strncmp($bytes, "PK\x03\x04", 4) === 0) ? $bytes : null;
+}
+
+/** Rebuilds the Excel backup from these sign-ups and returns its bytes. Call with the exclusive lock held. */
+function mld_backup_write(array $rows)
+{
+    $bytes = mld_xlsx($rows);
+    mld_write_atomic(mld_path('backup-xlsx.php'), MLD_GUARD . "\n" . base64_encode($bytes));
+    return $bytes;
+}
+
+/** A one-sheet workbook ("Entrants": Name | Phone number | Email), the same layout as the wheel's Excel. */
+function mld_xlsx(array $rows)
+{
+    $cell = function ($ref, $text, $style) {
+        $text = preg_replace('/[^\x{9}\x{A}\x{D}\x{20}-\x{D7FF}\x{E000}-\x{FFFD}\x{10000}-\x{10FFFF}]/u', '', (string) $text);
+        if ($text === null || $text === '') {
+            return '';
+        }
+        $s = $style ? ' s="1"' : '';
+        return '<c r="' . $ref . '"' . $s . ' t="inlineStr"><is><t xml:space="preserve">'
+            . htmlspecialchars($text, ENT_XML1 | ENT_QUOTES, 'UTF-8') . '</t></is></c>';
+    };
+    $sheet = '<row r="1">' . $cell('A1', 'Name', true) . $cell('B1', 'Phone number', true) . $cell('C1', 'Email', true) . '</row>';
+    $n = 1;
+    foreach ($rows as $r) {
+        $n++;
+        $sheet .= '<row r="' . $n . '">' . $cell('A' . $n, mld_str($r, 'name'), false)
+            . $cell('B' . $n, mld_str($r, 'number'), false) . $cell('C' . $n, mld_str($r, 'email'), false) . '</row>';
+    }
+    $x = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' . "\n";
+    $ns = 'http://schemas.openxmlformats.org';
+    $files = [
+        '[Content_Types].xml' => $x . '<Types xmlns="' . $ns . '/package/2006/content-types">'
+            . '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
+            . '<Default Extension="xml" ContentType="application/xml"/>'
+            . '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>'
+            . '<Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>'
+            . '<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>'
+            . '</Types>',
+        '_rels/.rels' => $x . '<Relationships xmlns="' . $ns . '/package/2006/relationships">'
+            . '<Relationship Id="rId1" Type="' . $ns . '/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>'
+            . '</Relationships>',
+        'xl/workbook.xml' => $x . '<workbook xmlns="' . $ns . '/spreadsheetml/2006/main" xmlns:r="' . $ns . '/officeDocument/2006/relationships">'
+            . '<sheets><sheet name="Entrants" sheetId="1" r:id="rId1"/></sheets>'
+            . '<definedNames><definedName name="_xlnm._FilterDatabase" localSheetId="0" hidden="1">Entrants!$A$1:$C$' . $n . '</definedName></definedNames>'
+            . '</workbook>',
+        'xl/_rels/workbook.xml.rels' => $x . '<Relationships xmlns="' . $ns . '/package/2006/relationships">'
+            . '<Relationship Id="rId1" Type="' . $ns . '/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>'
+            . '<Relationship Id="rId2" Type="' . $ns . '/officeDocument/2006/relationships/styles" Target="styles.xml"/>'
+            . '</Relationships>',
+        'xl/styles.xml' => $x . '<styleSheet xmlns="' . $ns . '/spreadsheetml/2006/main">'
+            . '<fonts count="2"><font><sz val="11"/><name val="Calibri"/><family val="2"/></font>'
+            . '<font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Calibri"/><family val="2"/></font></fonts>'
+            . '<fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill>'
+            . '<fill><patternFill patternType="solid"><fgColor rgb="FF6E006E"/><bgColor indexed="64"/></patternFill></fill></fills>'
+            . '<borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>'
+            . '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>'
+            . '<cellXfs count="2"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>'
+            . '<xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1"/></cellXfs>'
+            . '<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>'
+            . '</styleSheet>',
+        'xl/worksheets/sheet1.xml' => $x . '<worksheet xmlns="' . $ns . '/spreadsheetml/2006/main">'
+            . '<dimension ref="A1:C' . $n . '"/>'
+            . '<sheetViews><sheetView workbookViewId="0" tabSelected="1"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>'
+            . '<sheetFormatPr defaultRowHeight="15"/>'
+            . '<cols><col min="1" max="1" width="32" customWidth="1"/><col min="2" max="2" width="20" customWidth="1"/><col min="3" max="3" width="38" customWidth="1"/></cols>'
+            . '<sheetData>' . $sheet . '</sheetData>'
+            . '<autoFilter ref="A1:C' . $n . '"/>'
+            . '</worksheet>',
+    ];
+    return mld_zip_store($files);
+}
+
+/** A minimal ZIP writer (stored, no compression), so no PHP extension is needed. */
+function mld_zip_store(array $files)
+{
+    $t = getdate();
+    $dosTime = ($t['hours'] << 11) | ($t['minutes'] << 5) | intdiv($t['seconds'], 2);
+    $dosDate = (max(0, $t['year'] - 1980) << 9) | ($t['mon'] << 5) | $t['mday'];
+    $out = '';
+    $central = '';
+    foreach ($files as $name => $data) {
+        $crc = crc32($data);
+        $len = strlen($data);
+        $offset = strlen($out);
+        $out .= pack('VvvvvvVVVvv', 0x04034b50, 20, 0, 0, $dosTime, $dosDate, $crc, $len, $len, strlen($name), 0) . $name . $data;
+        $central .= pack('VvvvvvvVVVvvvvvVV', 0x02014b50, 20, 20, 0, 0, $dosTime, $dosDate, $crc, $len, $len,
+            strlen($name), 0, 0, 0, 0, 0, $offset) . $name;
+    }
+    $count = count($files);
+    return $out . $central . pack('VvvvvVVv', 0x06054b50, 0, 0, $count, $count, strlen($central), strlen($out), 0);
 }
 
 /* ---- Admin helpers ------------------------------------------------------------------------------ */
