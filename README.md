@@ -29,10 +29,7 @@ accounts, adverts, tracking or network requests.
    Phone sign-ups → Clear all sign-ups on the server** (or deleting the folder) wipes them.
 
 The first visit opens a short **How it works** guide. You can reopen it any time with the **?**
-button. To try the wheel straight away, press **Load 12 demo entries**. These are fictional people
-with `@example.com` addresses and Ofcom drama-range numbers. **Clear demo entries** removes only
-those, together with their draws in the winner log. If no real draws are left, the next draw is
-Round 1 again. The **Demo entries** button asks first if real people are already on the wheel.
+button.
 
 ## Using it at an event
 
@@ -108,7 +105,7 @@ Round 1 again. The **Demo entries** button asks first if real people are already
 
 **Exports**
 - **Download Excel (.xlsx):** one sheet, **Entrants**, with just **Name, Phone number and Email** for
-  everyone who entered (on the wheel, winners and removed; demo entries left out). Phone numbers keep
+  everyone who entered (on the wheel, winners and removed). Phone numbers keep
   their leading 0 or +44. The winner log stays in the app's **Winners** tab.
   This button is in the panel header, the Entries tab and the Winners tab.
 - **CSV:** the winner log and the entrant list, as UTF-8 files that are safe to open in Excel.
