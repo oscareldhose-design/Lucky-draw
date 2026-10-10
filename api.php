@@ -175,6 +175,7 @@ function mld_main()
         'setConfig' => ['POST', 'mld_action_set_config'],
         'clear' => ['POST', 'mld_action_clear'],
         'exportXlsx' => ['GET', 'mld_action_export_xlsx'],
+        'setWinners' => ['POST', 'mld_action_set_winners'],
     ];
     if (!isset($routes[$action])) {
         mld_fail(404, 'not_found', 'Unknown action.');
@@ -213,6 +214,7 @@ function mld_public_config(array $state)
         'consentText' => $c['consentText'],
         'marketingText' => $c['marketingText'],
         'showMarketing' => $c['showMarketing'],
+        'event' => $state['epoch'], // changes on "New event", so guests' phones forget the last event
     ];
 }
 
@@ -286,7 +288,7 @@ function mld_action_submit()
         $state['count'] = count($rows) + 1;
         mld_state_write($state);
         $rows[] = $entry;
-        mld_backup_write($rows); // the Excel backup always includes this sign-up
+        mld_backup_write($rows, $state['winners']); // the Excel backup always includes this sign-up
         return [201, ['ok' => true, 'entryId' => $entry['entryId']]];
     });
     mld_send($result[0], $result[1]);
@@ -524,12 +526,51 @@ function mld_action_clear()
         $state['epoch'] = bin2hex(random_bytes(8));
         $state['epochAt'] = mld_now_iso();
         $state['count'] = 0;
+        $state['winners'] = ['phones' => [], 'emails' => []];
         mld_state_write($state);         // seq keeps counting up, so old numbers are never reused
         mld_write_atomic(mld_path('entries.php'), MLD_GUARD . "\n");
-        mld_backup_write([]);
+        mld_backup_write([], $state['winners']);
         return $state['epoch'];
     });
     mld_send(200, ['ok' => true, 'epoch' => $epoch]);
+}
+
+/**
+ * POST setWinners (organiser only): { winners: [ { number, email } ] } — who has won on the laptop, so the
+ * server's Excel backup can show "Winner" next to them too.
+ */
+function mld_action_set_winners()
+{
+    mld_require_csrf();
+    mld_require_admin();
+    $b = mld_json_body();
+    $list = isset($b['winners']) && is_array($b['winners']) ? $b['winners'] : null;
+    if ($list === null || count($list) > MAX_ENTRIES) {
+        mld_fail(400, 'invalid', 'Send the winners as a list.', 'winners');
+    }
+    $w = ['phones' => [], 'emails' => []];
+    foreach ($list as $r) {
+        if (!is_array($r)) {
+            continue;
+        }
+        $p = mld_norm_phone(isset($r['number']) && is_string($r['number']) ? mld_cut($r['number'], 40) : '');
+        $e = mld_norm_email(isset($r['email']) && is_string($r['email']) ? mld_cut($r['email'], 254) : '');
+        if ($p !== '') {
+            $w['phones'][] = $p;
+        }
+        if ($e !== '') {
+            $w['emails'][] = $e;
+        }
+    }
+    $w = mld_winners_clean($w);
+    mld_locked(true, function () use ($w) {
+        $state = mld_state_read();
+        $state['winners'] = $w;
+        mld_state_write($state);
+        $raw = '';
+        mld_backup_write(mld_entries_read($raw), $w);
+    });
+    mld_send(200, ['ok' => true]);
 }
 
 /* ---- Excel backup ------------------------------------------------------------------------------- */
@@ -548,7 +589,8 @@ function mld_action_export_xlsx()
     if ($bytes === null) { // missing or damaged: rebuild it from the sign-ups
         $bytes = mld_locked(true, function () {
             $raw = '';
-            return mld_backup_write(mld_entries_read($raw));
+            $rows = mld_entries_read($raw);
+            return mld_backup_write($rows, mld_state_read()['winners']);
         });
     }
     if (!headers_sent()) {
@@ -578,16 +620,18 @@ function mld_backup_read()
 }
 
 /** Rebuilds the Excel backup from these sign-ups and returns its bytes. Call with the exclusive lock held. */
-function mld_backup_write(array $rows)
+function mld_backup_write(array $rows, array $winners)
 {
-    $bytes = mld_xlsx($rows);
+    $bytes = mld_xlsx($rows, $winners);
     mld_write_atomic(mld_path('backup-xlsx.php'), MLD_GUARD . "\n" . base64_encode($bytes));
     return $bytes;
 }
 
-/** A one-sheet workbook ("Entrants": Name | Phone number | Email), the same layout as the wheel's Excel. */
-function mld_xlsx(array $rows)
+/** A one-sheet workbook ("Entrants": Name | Phone number | Email | Winner), the same layout as the wheel's Excel. */
+function mld_xlsx(array $rows, array $winners)
 {
+    $wp = array_flip(isset($winners['phones']) ? $winners['phones'] : []);
+    $we = array_flip(isset($winners['emails']) ? $winners['emails'] : []);
     $cell = function ($ref, $text, $style) {
         $text = preg_replace('/[^\x{9}\x{A}\x{D}\x{20}-\x{D7FF}\x{E000}-\x{FFFD}\x{10000}-\x{10FFFF}]/u', '', (string) $text);
         if ($text === null || $text === '') {
@@ -597,12 +641,15 @@ function mld_xlsx(array $rows)
         return '<c r="' . $ref . '"' . $s . ' t="inlineStr"><is><t xml:space="preserve">'
             . htmlspecialchars($text, ENT_XML1 | ENT_QUOTES, 'UTF-8') . '</t></is></c>';
     };
-    $sheet = '<row r="1">' . $cell('A1', 'Name', true) . $cell('B1', 'Phone number', true) . $cell('C1', 'Email', true) . '</row>';
+    $sheet = '<row r="1">' . $cell('A1', 'Name', true) . $cell('B1', 'Phone number', true) . $cell('C1', 'Email', true)
+        . $cell('D1', 'Winner', true) . '</row>';
     $n = 1;
     foreach ($rows as $r) {
         $n++;
         $sheet .= '<row r="' . $n . '">' . $cell('A' . $n, mld_str($r, 'name'), false)
-            . $cell('B' . $n, mld_str($r, 'number'), false) . $cell('C' . $n, mld_str($r, 'email'), false) . '</row>';
+            . $cell('B' . $n, mld_str($r, 'number'), false) . $cell('C' . $n, mld_str($r, 'email'), false)
+            . $cell('D' . $n, (isset($wp[mld_norm_phone(mld_str($r, 'number'))]) || isset($we[mld_norm_email(mld_str($r, 'email'))])) ? 'Winner' : '', false)
+            . '</row>';
     }
     $x = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' . "\n";
     $ns = 'http://schemas.openxmlformats.org';
@@ -619,7 +666,7 @@ function mld_xlsx(array $rows)
             . '</Relationships>',
         'xl/workbook.xml' => $x . '<workbook xmlns="' . $ns . '/spreadsheetml/2006/main" xmlns:r="' . $ns . '/officeDocument/2006/relationships">'
             . '<sheets><sheet name="Entrants" sheetId="1" r:id="rId1"/></sheets>'
-            . '<definedNames><definedName name="_xlnm._FilterDatabase" localSheetId="0" hidden="1">Entrants!$A$1:$C$' . $n . '</definedName></definedNames>'
+            . '<definedNames><definedName name="_xlnm._FilterDatabase" localSheetId="0" hidden="1">Entrants!$A$1:$D$' . $n . '</definedName></definedNames>'
             . '</workbook>',
         'xl/_rels/workbook.xml.rels' => $x . '<Relationships xmlns="' . $ns . '/package/2006/relationships">'
             . '<Relationship Id="rId1" Type="' . $ns . '/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>'
@@ -637,12 +684,12 @@ function mld_xlsx(array $rows)
             . '<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>'
             . '</styleSheet>',
         'xl/worksheets/sheet1.xml' => $x . '<worksheet xmlns="' . $ns . '/spreadsheetml/2006/main">'
-            . '<dimension ref="A1:C' . $n . '"/>'
+            . '<dimension ref="A1:D' . $n . '"/>'
             . '<sheetViews><sheetView workbookViewId="0" tabSelected="1"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>'
             . '<sheetFormatPr defaultRowHeight="15"/>'
-            . '<cols><col min="1" max="1" width="32" customWidth="1"/><col min="2" max="2" width="20" customWidth="1"/><col min="3" max="3" width="38" customWidth="1"/></cols>'
+            . '<cols><col min="1" max="1" width="32" customWidth="1"/><col min="2" max="2" width="20" customWidth="1"/><col min="3" max="3" width="38" customWidth="1"/><col min="4" max="4" width="12" customWidth="1"/></cols>'
             . '<sheetData>' . $sheet . '</sheetData>'
-            . '<autoFilter ref="A1:C' . $n . '"/>'
+            . '<autoFilter ref="A1:D' . $n . '"/>'
             . '</worksheet>',
     ];
     return mld_zip_store($files);
@@ -1242,6 +1289,7 @@ function mld_init_files()
             'count' => count($rows),
             'secret' => bin2hex(random_bytes(32)),
             'config' => MLD_DEFAULT_CONFIG,
+            'winners' => ['phones' => [], 'emails' => []],
         ]);
     }
 }
@@ -1286,7 +1334,24 @@ function mld_state_parse($raw)
         'count' => isset($s['count']) && is_int($s['count']) ? max(0, $s['count']) : 0,
         'secret' => $s['secret'],
         'config' => mld_config_apply(MLD_DEFAULT_CONFIG, isset($s['config']) ? $s['config'] : [], false),
+        'winners' => mld_winners_clean(isset($s['winners']) ? $s['winners'] : null),
     ];
+}
+
+/** Winners as sent by the organiser's laptop: normalised phone numbers and emails (at most MAX_ENTRIES each). */
+function mld_winners_clean($w)
+{
+    $out = ['phones' => [], 'emails' => []];
+    foreach (['phones', 'emails'] as $k) {
+        if (is_array($w) && isset($w[$k]) && is_array($w[$k])) {
+            foreach ($w[$k] as $v) {
+                if (is_string($v) && $v !== '' && strlen($v) <= 254 && count($out[$k]) < MAX_ENTRIES) {
+                    $out[$k][] = $v;
+                }
+            }
+        }
+    }
+    return $out;
 }
 
 function mld_state_write(array $state)

@@ -25,7 +25,12 @@ accounts, adverts, tracking or network requests.
    backup (Name | Phone number | Email) that is updated after each one. Download it from **Settings →
    Phone sign-ups → Download Excel from server** (you must be logged in; it can't be downloaded
    any other way).
-6. Sign-ups are stored in the `data` folder that `api.php` creates next to itself. **Settings →
+6. **New event** (next to Download Excel, and in Settings → Data) starts the next event cleanly: type
+   NEW EVENT to confirm and it permanently deletes everyone who entered, the winners and the round count
+   on the laptop, plus all phone sign-ups and the Excel backup on the server (it offers "Download Excel
+   first"). Settings and the password stay; sign-ups reopen; guests from the last event can enter again.
+7. Both Excel files have one sheet: **Name | Phone number | Email | Winner** ("Winner" next to each winner).
+8. Sign-ups are stored in the `data` folder that `api.php` creates next to itself. **Settings →
    Phone sign-ups → Clear all sign-ups on the server** (or deleting the folder) wipes them.
 
 The first visit opens a short **How it works** guide. You can reopen it any time with the **?**

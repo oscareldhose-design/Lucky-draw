@@ -301,6 +301,9 @@ svg { flex: none; }
 .panel-counts { font-size: 14px; font-weight: 700; color: var(--text); }
 .panel-counts .n { color: var(--accent-ink); }
 .btn-excel { min-height: 44px; padding: 0 12px; font-size: 14px; border-radius: 12px; gap: 6px; }
+/* Download Excel + New event: beside the counts on a wide panel, otherwise a full-width row of their own */
+.panel-actions { flex: 1 1 auto; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+.panel-actions .btn { flex: 1 1 auto; }
 .tabs { display: flex; gap: 4px; padding: 8px 12px 0; border-bottom: 1px solid var(--line); }
 .tab {
   flex: 1; position: relative; min-height: 52px; padding: 0 8px; border: 0; background: transparent; color: var(--text-2);
@@ -469,6 +472,10 @@ dialog::backdrop { background: var(--backdrop); backdrop-filter: blur(3px); }
 .modal-actions { display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; margin-top: 4px; }
 .modal-actions .btn { flex: 1 1 140px; }
 .modal-close { position: absolute; top: 12px; right: 12px; }
+/* Optional extra button in the confirm dialog (e.g. "Download Excel first"): it never closes the dialog */
+.cd-extra { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
+.cd-extra-msg { font-size: 14px; color: var(--text-2); }
+.cd-extra-msg:empty { display: none; }
 
 /* Winner dialog */
 .winner-dialog[open] { display: grid; place-items: center; width: 100vw; height: 100vh; height: 100dvh; margin: 0; inset: 0; overflow: hidden; }
@@ -821,6 +828,7 @@ body.event-mode .srv-banner { display: none; }
   <symbol id="i-shuffle" viewBox="0 0 24 24"><path d="M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/></symbol>
   <symbol id="i-sort" viewBox="0 0 24 24"><path d="M3 6h10M3 12h7M3 18h4M18 4v16M14 16l4 4 4-4"/></symbol>
   <symbol id="i-undo" viewBox="0 0 24 24"><path d="M1 4v6h6"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></symbol>
+  <symbol id="i-restart" viewBox="0 0 24 24"><path d="M1 4v6h6M23 20v-6h-6"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4-4.64 4.36A9 9 0 0 1 3.51 15"/></symbol>
   <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol>
   <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
   <symbol id="i-lock" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></symbol>
@@ -905,7 +913,10 @@ body.event-mode .srv-banner { display: none; }
       <div class="panel-top">
         <p class="panel-counts" id="panelCounts">0 on the wheel · 0 winners</p>
         <button type="button" class="sync-pill" data-state="connecting" hidden><span class="sp-dot" aria-hidden="true"></span><span class="sp-text">Phone sign-ups: connecting…</span></button>
-        <button type="button" class="btn btn-secondary btn-excel" data-action="xlsx"><svg class="ic ic-sm" aria-hidden="true"><use href="#i-sheet"/></svg>Download Excel (.xlsx)</button>
+        <div class="panel-actions">
+          <button type="button" class="btn btn-secondary btn-excel" data-action="xlsx"><svg class="ic ic-sm" aria-hidden="true"><use href="#i-sheet"/></svg>Download Excel (.xlsx)</button>
+          <button type="button" class="btn btn-danger btn-excel" data-action="new-event" data-lock><svg class="ic ic-sm" aria-hidden="true"><use href="#i-restart"/></svg>New event</button>
+        </div>
       </div>
       <div class="tabs" role="tablist" aria-label="Panel sections">
         <button type="button" class="tab" role="tab" id="tab-entries" aria-controls="panel-entries" aria-selected="true" tabindex="0">Entries <span class="tab-count" id="countEntries">0</span></button>
@@ -1098,8 +1109,9 @@ body.event-mode .srv-banner { display: none; }
         </fieldset>
         <fieldset class="set-group">
           <legend>Data</legend>
-          <p class="note" id="dataNote">Everything is stored only in this browser on this device. Export before you clear it.</p>
+          <p class="note" id="dataNote">Everything is stored only in this browser on this device. <b>New event</b> deletes everyone who entered, the winners and the round count, but keeps your settings. <b>Delete ALL data</b> deletes the settings too. Download the Excel file first.</p>
           <div class="btn-row">
+            <button type="button" class="btn btn-danger" data-action="new-event" data-lock><svg class="ic ic-sm" aria-hidden="true"><use href="#i-restart"/></svg>New event</button>
             <button type="button" class="btn btn-ghost" data-action="reset-round" data-lock><svg class="ic ic-sm" aria-hidden="true"><use href="#i-undo"/></svg>Reset round counter</button>
             <button type="button" class="btn btn-danger" data-action="delete-all" data-lock><svg class="ic ic-sm" aria-hidden="true"><use href="#i-trash"/></svg>Delete ALL data</button>
           </div>
@@ -1229,6 +1241,10 @@ body.event-mode .srv-banner { display: none; }
   <form class="modal-card" id="cdForm" novalidate>
     <h2 class="modal-title" id="cdTitle">Are you sure?</h2>
     <p class="modal-text" id="cdText"></p>
+    <div class="cd-extra" id="cdExtraRow" hidden>
+      <button type="button" class="btn btn-secondary" id="cdExtra"><svg class="ic ic-sm" aria-hidden="true"><use href="#i-sheet"/></svg><span id="cdExtraLabel"></span></button>
+      <p class="cd-extra-msg" id="cdExtraMsg" role="status"></p>
+    </div>
     <div class="field" id="cdField" hidden>
       <label for="cdInput" id="cdLabel">PIN</label>
       <input class="input" id="cdInput" type="password" inputmode="numeric" autocomplete="off" maxlength="8" aria-describedby="cdErr">
@@ -2604,14 +2620,19 @@ function announce(msg) {
 }
 const confirmDialog = $('#confirmDialog');
 let confirmState = null;
-/** Promise-based confirm / prompt. validate(value) returns an error string or ''. */
-function askConfirm({ title, text = '', ok = 'OK', cancel = 'Cancel', danger = false, input = null, validate = null }) {
+/** Promise-based confirm / prompt. validate(value) returns an error string or ''.
+    extra = { label, onClick }: one more button that does NOT close the dialog (e.g. "Download Excel first");
+    a string returned by onClick is shown under it. */
+function askConfirm({ title, text = '', ok = 'OK', cancel = 'Cancel', danger = false, input = null, validate = null, extra = null }) {
   if (confirmState) confirmState.resolve(null);
   return new Promise(resolve => {
-    confirmState = { resolve, validate, input };
+    confirmState = { resolve, validate, input, extra };
     $('#cdTitle').textContent = title;
     $('#cdText').textContent = text;
     $('#cdText').hidden = !text;
+    $('#cdExtraRow').hidden = !extra;
+    $('#cdExtraLabel').textContent = extra ? extra.label : '';
+    $('#cdExtraMsg').textContent = '';
     const okBtn = $('#cdOk');
     okBtn.textContent = ok;
     okBtn.className = 'btn btn-lg ' + (danger ? 'btn-danger' : 'btn-primary');
@@ -2648,6 +2669,12 @@ onFormSubmit($('#cdForm'), () => {
   endConfirm(true);
 });
 $('#cdCancel').addEventListener('click', () => endConfirm(null));
+$('#cdExtra').addEventListener('click', () => {
+  const st = confirmState;
+  if (!st || !st.extra) return;
+  const msg = st.extra.onClick();
+  if (confirmState === st) $('#cdExtraMsg').textContent = typeof msg === 'string' ? msg : '';
+});
 confirmDialog.addEventListener('close', () => { if (confirmState) endConfirm(null); });
 
 function download(filename, data, type) {
@@ -3600,6 +3627,57 @@ $('#helpOk').addEventListener('click', closeHelp);
 $('#helpClose').addEventListener('click', closeHelp);
 
 
+/** "New event": deletes everyone who entered, the winners and the round count — on the server too (phone
+    sign-ups and its Excel backup) — so nothing from the last event can show up again. Settings and the
+    organiser's login are kept. All or nothing: if the server can't be cleared, nothing is deleted here. */
+let newEventBusy = false;
+async function newEvent() {
+  if (newEventBusy || isLocked()) return;
+  const server = appMode === 'organiser' && sync.authed;
+  const v = await askConfirm({
+    title: 'Start a new event?',
+    text: 'This permanently deletes everyone who entered, all winners and the round count'
+      + (server ? ' on this laptop, plus every phone sign-up and the Excel backup on your server' : '')
+      + '. The old Excel file can’t be downloaded again afterwards. Your settings' + (server ? ' and password stay the same, and sign-ups are opened for the new event.' : ' stay the same.')
+      + ' Type NEW EVENT to confirm.',
+    ok: 'Start new event', danger: true,
+    extra: { label: 'Download Excel first', onClick: () => { downloadXlsx(); return 'Downloaded — check your Downloads folder.'; } },
+    input: { label: 'Type NEW EVENT to confirm', type: 'text', inputMode: 'text', maxLength: 20, autocapitalize: 'characters' },
+    validate: val => (val.trim().replace(/\s+/g, ' ').toUpperCase() === 'NEW EVENT' ? '' : 'Type NEW EVENT to confirm.')
+  });
+  if (v == null || isLocked()) return;
+  newEventBusy = true;
+  try {
+    if (server) {
+      stopSync();
+      for (let i = 0; sync.busy && i < 150; i++) await sleep(100); // let an in-flight poll finish first
+      const r = await api('clear', { method: 'POST', body: { confirm: 'DELETE' }, admin: true });
+      if (r.status === 401) { requireLogin(); return; }
+      if (!r.ok) {
+        startSync();
+        toast('Couldn’t reach the server — nothing was deleted. Try again.', { type: 'error' });
+        return;
+      }
+    }
+    const fresh = freshState();
+    fresh.settings = { ...S(), prize: '', updatedAt: stamp() };
+    fresh.epoch = { id: uid(), at: Date.now() };   // other windows still holding the old event can't merge it back
+    state = fresh;
+    editingId = null;
+    sync.epoch = null; sync.since = 0; sync.total = 0; sync.winnersSig = '';
+    saveCursor();
+    try { localStorage.removeItem(ENTERED_KEY); } catch (e) { /* ignore */ }
+    commit();
+    if (server) {
+      startSync();
+      await pushConfig({ open: true }); // shows its own message if it fails
+    }
+    toast('New event started — everything from the last event has been deleted.');
+  } finally {
+    newEventBusy = false;
+  }
+}
+
 /* ---------------------------------------------------------------------
    Global actions (event delegation for data-action buttons)
    --------------------------------------------------------------------- */
@@ -3607,7 +3685,7 @@ document.addEventListener('click', async ev => {
   const b = ev.target.closest('[data-action]');
   if (!b || b.disabled) return;
   const act = b.dataset.action;
-  const lockedActs = ['shuffle', 'sort', 'clear-all', 'clear-log', 'reset-round', 'delete-all'];
+  const lockedActs = ['shuffle', 'sort', 'clear-all', 'clear-log', 'reset-round', 'delete-all', 'new-event'];
   if (lockedActs.includes(act) && isLocked()) return toast('Finish the current draw first.');
   switch (act) {
     case 'xlsx': downloadXlsx(); break;
@@ -3658,6 +3736,7 @@ document.addEventListener('click', async ev => {
       toast('Round counter reset.');
       break;
     }
+    case 'new-event': newEvent(); break;
     case 'delete-all': {
       const ok = await askConfirm({ title: 'Delete ALL data?', text: 'Every entry, the winner log and all settings will be permanently deleted from this browser. This cannot be undone.', ok: 'Delete everything', danger: true });
       if (!ok) return;
@@ -3793,7 +3872,8 @@ function cleanPublicConfig(d) {
     subtitle: typeof src.subtitle === 'string' ? str(cleanText(src.subtitle), 80) : DEFAULTS.subtitle,
     consentText: text(src.consentText, 400, DEFAULT_CONSENT),
     marketingText: text(src.marketingText, 200, DEFAULT_MARKETING),
-    showMarketing: src.showMarketing !== false
+    showMarketing: src.showMarketing !== false,
+    event: typeof src.event === 'string' ? str(src.event, 64) : ''
   };
 }
 function focusTop(sel) {
@@ -3824,6 +3904,8 @@ const guestDir = () => location.pathname.replace(/[^/]*$/, ''); // "/draw/" for 
 function rememberedEntry() {
   try {
     const r = JSON.parse(lsGet(ENTERED_KEY) || 'null');
+    const ev = guestCfg && guestCfg.event;
+    if (ev && r && r.event !== ev) return null; // entered at an earlier event: this is a new one
     if (r && r.dir === guestDir() && Date.now() - r.at < ENTERED_TTL) return { name: str(r.name, 80) };
   } catch (e) { /* ignore */ }
   return null;
@@ -3938,7 +4020,7 @@ async function guestSubmit() {
   setGuestSending(false);
   if (r.ok) {
     guestClient = null;
-    lsSet(ENTERED_KEY, JSON.stringify({ dir: guestDir(), name: firstName(v.name), at: Date.now() }));
+    lsSet(ENTERED_KEY, JSON.stringify({ dir: guestDir(), name: firstName(v.name), at: Date.now(), event: guestCfg.event || '' }));
     showGuestDone(v.name, false);
     return;
   }
@@ -4119,8 +4201,18 @@ function mergePhone(list, epoch, restore) {
   return out;
 }
 /** One check for new sign-ups (restore: read them all again from the start). Resolves to a summary, or null. */
+/** Tells api.php who has won (by phone number and email), so the server's Excel backup marks them "Winner" too. */
+async function pushWinners() {
+  const won = new Set(state.log.filter(r => r.type === 'Winner').map(r => r.entryId));
+  const list = state.entries.filter(e => won.has(e.id)).map(e => ({ number: e.number, email: e.email }));
+  const sig = JSON.stringify(list);
+  if (sig === sync.winnersSig) return;
+  const r = await api('setWinners', { method: 'POST', body: { winners: list }, admin: true });
+  if (r.ok) sync.winnersSig = sig;
+}
 async function pollPhone({ restore = false } = {}) {
   if (!sync.on || sync.busy) return null;
+  if (sync.authed && !spinning) pushWinners().catch(() => {});
   // The wheel never changes mid-spin: new sign-ups wait (queued on the server) and are fetched once it lands.
   if (spinning) { schedulePoll(400); return null; }
   clearTimeout(sync.timer);
