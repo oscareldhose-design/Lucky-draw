@@ -12,6 +12,10 @@ accounts, adverts, tracking or network requests.
 - **On a laptop or tablet:** download the repository and double-click `index.html`. It works offline,
   straight from disk.
 - **On your website, with phone sign-ups:** see below.
+- **Name your event:** before the wheel opens it always asks for the event's name (e.g. *Newcastle*). The
+  Excel file is named after it and the date it was named: `Newcastle 10-10-2026.xlsx` (CSV files likewise,
+  the server backup `Newcastle 10-10-2026 (server backup).xlsx`). Reopening mid-event is one tap; change it in
+  **Settings → Event name**. **New event** asks for the next event's name.
 
 ## Phone sign-ups on your website (themaap.co.uk)
 
@@ -27,11 +31,49 @@ accounts, adverts, tracking or network requests.
    any other way).
 6. **New event** (next to Download Excel, and in Settings → Data) starts the next event cleanly: type
    NEW EVENT to confirm and it permanently deletes everyone who entered, the winners and the round count
-   on the laptop, plus all phone sign-ups and the Excel backup on the server (it offers "Download Excel
-   first"). Settings and the password stay; sign-ups reopen; guests from the last event can enter again.
-7. Both Excel files have one sheet: **Name | Phone number | Email | Winner** ("Winner" next to each winner).
-8. Sign-ups are stored in the `data` folder that `api.php` creates next to itself. **Settings →
-   Phone sign-ups → Clear all sign-ups on the server** (or deleting the folder) wipes them.
+   on the laptop, plus all phone sign-ups, the Excel backup and the event backup on the server (it offers
+   "Download Excel first"). Settings and the password stay; sign-ups reopen; guests from the last event can
+   enter again. Any other laptop on the same draw starts the new event too.
+7. **Your whole event is backed up on the server** (everyone on the wheel, including people typed in by hand,
+   the winners and no-shows, the round, the prize and the event name), a second or two after each change. If
+   your laptop dies, open the same address + `#wheel` on another laptop and log in: it says *This draw still
+   holds "Newcastle"* — choose **Continue that event** and everything is back, with past winners kept off the
+   wheel. Two laptops on one draw (e.g. a second screen) stay in step: someone drawn on one is never drawn on
+   the other, and while one is drawing a winner the other's SPIN waits (*A winner is being drawn on another
+   laptop*). Coming back to a draw the next day (or hours later), even on the same laptop, asks whether to continue
+   that event or start a new one. A laptop that was asleep or offline through a New event starts the new event
+   too and never brings the old one back.
+8. Both Excel files have one sheet: **Name | Phone number | Email | Winner** ("Winner" next to each winner,
+   whichever laptop drew them).
+9. Sign-ups and the event backup are stored in the `data` folder that `api.php` creates next to itself.
+   **New event** wipes them. **Settings → Phone sign-ups → Clear all sign-ups on the server** deletes the
+   sign-ups and the Excel backup only: the wheel keeps its people, so guests' names, numbers and emails stay in the
+   draw's event backup until **New event** (or until the `data` folder is deleted). Deleting the folder also wipes
+   everything, but close the wheel first: a laptop that is still open backs its event up again.
+
+## Up to ten events at the same time
+
+1. Upload the same two files into the folders `draw`, `draw2` … `draw10` (only as many as you need) and set
+   `ADMIN_PASSWORD` in each `api.php`. Each folder is a separate draw: its own sign-ups, Excel backup and New event.
+2. One QR code for all of them: `https://themaap.co.uk/draw/`. Guests go straight to the event that's running;
+   when several are running they tap theirs under **Which event are you at?** (listed by event name).
+3. Organisers always open `https://themaap.co.uk/draw/#wheel`. If Draw 1 is in use on another laptop, the page
+   moves to the first free draw after 5 seconds (or **Stay on Draw 1 (same event)** / **This is my event —
+   continue it**); the header shows which draw you're on. A draw is free again as soon as its laptop logs out, or
+   90 seconds after it closes the wheel. If another laptop takes your draw while you're typing the password, you're
+   told straight after logging in and offered the next free draw.
+4. **Back to your event from another laptop** (e.g. your laptop died on Draw 3): open
+   `https://themaap.co.uk/draw/#wheel`; the log-in screen and **Name your event** list *Or continue an event that's
+   already running*, e.g. **Continue: Newcastle — Draw 3**. Choose it, log in, and the wheel, winners, round and
+   name are back. Opening `https://themaap.co.uk/draw3/#wheel` directly works too.
+5. A draw that still holds an earlier event says so (*This draw still holds "Bristol Open Day" (from 14:05).*):
+   **Continue that event**, or **Start a new event** (New event, with "Download Excel first"). If its laptop was
+   connected only minutes ago (e.g. its Wi-Fi dropped), it says so and offers **Use another draw**; typing a
+   different event name there (within two hours of that laptop's last connection) also moves you to a free draw with
+   your name filled in, so a running event is never deleted by mistake. A laptop whose
+   draw is restarted by New event on another laptop is offered that event's Excel one last time. Guests see the
+   event's name above the form.
+6. Wheels, logins and guests' "already entered" memory are kept apart per draw, even in one browser.
 
 The first visit opens a short **How it works** guide. You can reopen it any time with the **?**
 button.
@@ -65,7 +107,8 @@ button.
 - Above the form, guests see this notice: *"Please ensure that all details are correct as we will
   message a code to your number to confirm you have given the correct details which is necessary to
   claim your prize on stage."*
-- Guests enter their name, phone number and email (all required) and must tick the consent box. The
+- Guests enter their name, phone number and email (all required) and must tick the consent box and
+  **"I confirm I am aged 18 or over."** (otherwise: *"You must be 18 or over to enter the draw."*). The
   marketing opt-in is separate, optional and unticked.
 - After a guest enters, a confirmation screen says *"You're entered into the raffle!"* and
   *"Thank you, NAME. You may now close this window."* It stays until the guest closes the window;
@@ -73,6 +116,9 @@ button.
   close itself (the window that **Guest sign-up** opens). There is no way back to a blank form from
   the confirmation; the organiser opens **Guest sign-up** again for the next person. When the form
   was shown over the wheel, the confirmation asks the guest to hand the device back instead.
+- On your website (a guest's own phone, or a sign-up window there) the confirmation shows for 3 seconds
+  with *"Taking you to themaap.co.uk…"*, then the page goes to https://themaap.co.uk/ (also from *"You're
+  already entered into the raffle."*). Opened from disk, or over the wheel, it stays as described above.
 - Guests can't enter without ticking the **"I agree that MAP may store my details…"** box.
 - The guest screen never shows how many people have entered, and operator messages never appear
   over it.
@@ -82,10 +128,10 @@ button.
   asks you to confirm.
 
 **Spinning**
-- Press **SPIN**, tap the wheel, or press **Space**. Set the prize for each round in the box beside
-  the SPIN button. Once a winner is confirmed the box is cleared, so a prize never carries into the
-  next round by mistake. The box then shows the last prize as a hint. After a no-show the redraw
-  keeps the same prize.
+- Press **SPIN**, click or tap the wheel, or press **Space** (in event mode too). Set the prize for
+  each round in the box beside the SPIN button. Once a winner is confirmed the box is cleared, so a
+  prize never carries into the next round by mistake. The box then shows the last prize as a hint.
+  After a no-show the redraw keeps the same prize.
 - The line under the wheel shows only the round and its prize. It never shows how many people or
   tickets are on the wheel; those counts are only in the operator's Entries panel.
 - The wheel ticks as it turns and plays a fanfare when it lands. It then highlights the winning
@@ -105,14 +151,15 @@ button.
 
 **Event mode**
 - Press **Event mode** or **F** to go full screen and keep the screen awake. Only the logo, title,
-  round, prize, wheel and SPIN button are shown, with no entrant counts.
+  prize, wheel and SPIN button are shown, with no entrant counts (no "Round N" line under SPIN).
+- The centre of the wheel shows the MAP logo.
 - Leave with **Esc** or **Exit event mode**.
 
 **Exports**
-- **Download Excel (.xlsx):** one sheet, **Entrants**, with just **Name, Phone number and Email** for
-  everyone who entered (on the wheel, winners and removed). Phone numbers keep
-  their leading 0 or +44. The winner log stays in the app's **Winners** tab.
-  This button is in the panel header, the Entries tab and the Winners tab.
+- **Download Excel (.xlsx):** one sheet, **Entrants**, with **Name, Phone number, Email and Winner** for
+  everyone who entered (on the wheel, winners and removed), named after the event, e.g.
+  `Newcastle 10-10-2026.xlsx`. Phone numbers keep their leading 0 or +44. The winner log stays in the app's
+  **Winners** tab. This button is in the panel header, the Entries tab and the Winners tab.
 - **CSV:** the winner log and the entrant list, as UTF-8 files that are safe to open in Excel.
 
 ## Fairness
@@ -127,7 +174,8 @@ button.
 ## Privacy and data
 
 - Entries, the winner log and settings are stored **only in this browser, on this device**
-  (`localStorage`). Nothing is uploaded.
+  (`localStorage`). Nothing is uploaded — except on your own website with `api.php` and `#wheel`, where the
+  event is also backed up in the draw's `data` folder (see above).
 - Clearing the browser's site data deletes them. **Download the Excel file before you clear
   anything.**
 - **Privacy mode** is on by default. It masks phone numbers and emails on screen, and the operator
@@ -158,7 +206,8 @@ website (see above).
 ## Files
 
 - `index.html`: the whole app (HTML, CSS and JavaScript in one file).
-- `api.php`: receives guests' phone sign-ups on your website and passes them to the wheel.
+- `api.php`: receives guests' phone sign-ups on your website and passes them to the wheel, and keeps the
+  backup of each draw's event that lets laptops take over from each other.
 - `assets/map-logo.svg`, `assets/map-mark.svg`: the MAP lockup and M mark as vector files, traced
   from the brand artwork.
 - `assets/brand/`: the original brand sheet and logo.

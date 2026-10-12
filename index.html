@@ -252,12 +252,15 @@ svg { flex: none; }
 .wheel-spot.show { opacity: 1; }
 :root[data-theme="dark"] .bulbs { filter: drop-shadow(0 0 3px rgba(255, 220, 255, .9)); }
 .hub {
-  position: absolute; left: 50%; top: 50%; width: 21%; height: 21%; transform: translate(-50%, -50%);
+  /* The client's full logo (SPEC 2.25): a third of the wheel, a little more on a small wheel (drawWheel() keeps the
+     names clear of it with the same size) */
+  --hub: max(calc(var(--ws, 300px) * .32), min(120px, calc(var(--ws, 300px) * .4)));
+  position: absolute; left: 50%; top: 50%; width: var(--hub); height: var(--hub); transform: translate(-50%, -50%);
   border-radius: 50%; background: #fff; display: grid; place-items: center; pointer-events: none;
   border: calc(var(--ws, 300px) * .012) solid var(--brand-800);
   box-shadow: 0 0 0 calc(var(--ws, 300px) * .006) rgba(255, 255, 255, .7), 0 6px 18px rgba(42, 0, 42, .35), inset 0 -3px 8px rgba(110, 0, 110, .12);
 }
-.hub svg { width: 56%; height: auto; margin-top: -4%; }
+.hub .logo-file { height: 63%; width: auto; margin-top: 1%; }
 .pointer {
   position: absolute; left: 50%; top: calc(var(--ws, 300px) * -0.035);
   width: calc(var(--ws, 300px) * .092); height: calc(var(--ws, 300px) * .13);
@@ -529,12 +532,13 @@ dialog::backdrop { background: var(--backdrop); backdrop-filter: blur(3px); }
 
 /* Toasts */
 .toasts { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); z-index: 60; display: flex; flex-direction: column; gap: 8px; align-items: center; width: min(560px, calc(100vw - 32px)); pointer-events: none; }
-.toast { pointer-events: auto; display: flex; align-items: flex-start; gap: 10px; width: 100%; padding: 14px 16px; border-radius: 16px; background: #1f0a1f; color: #fff; box-shadow: 0 12px 30px rgba(0, 0, 0, .3); font-size: 15px; animation: toastIn .25s ease; }
+.toast { pointer-events: none; display: flex; align-items: flex-start; gap: 10px; width: 100%; padding: 14px 16px; border-radius: 16px; background: #1f0a1f; color: #fff; box-shadow: 0 12px 30px rgba(0, 0, 0, .3); font-size: 15px; animation: toastIn .25s ease; }
 :root[data-theme="dark"] .toast { background: #fff; color: #1f0a1f; }
 .toast .t-body { flex: 1; min-width: 0; }
 .toast .t-detail { display: block; font-size: 13px; opacity: .8; margin-top: 2px; }
 .toast.error { background: var(--danger); color: #fff; }
 :root[data-theme="dark"] .toast.error { background: #ff8f86; color: #2a0000; }
+.toast button { pointer-events: auto; }
 .toast .t-x { background: none; border: 0; color: inherit; opacity: .8; padding: 2px; width: 44px; height: 44px; margin: -10px -10px -10px 0; border-radius: 10px; display: grid; place-items: center; flex: none; }
 .toast .t-x .ic { width: 18px; height: 18px; }
 .toast .t-act { flex: none; align-self: center; min-height: 36px; margin: -8px 0; padding: 0 12px; border-radius: 10px; border: 1.5px solid currentColor; background: transparent; color: inherit; font-size: 14px; font-weight: 700; letter-spacing: .04em; }
@@ -601,6 +605,7 @@ dialog::backdrop { background: var(--backdrop); backdrop-filter: blur(3px); }
 .su-success-sub { font-size: 22px; line-height: 1.35; color: var(--text); font-weight: 400; max-width: 30ch; overflow-wrap: anywhere; }
 .su-success-sub strong { color: var(--heading); }
 .su-success .btn { min-width: min(280px, 100%); }
+.su-home { font-size: 16px; font-weight: 700; letter-spacing: .04em; color: var(--text-2); }
 @media (max-width: 900px), (max-aspect-ratio: 1/1) {
   /* max-content: the brand band is overflow:hidden (for its watermark), so an "auto" row could collapse it */
   .signup { grid-template-columns: minmax(0, 1fr); grid-template-rows: max-content 1fr; align-content: start; }
@@ -761,6 +766,73 @@ body.event-mode .srv-banner { display: none; }
 @media (max-width: 760px) { .app-header .sync-pill { width: 48px; padding: 0; justify-content: center; } .app-header .sync-pill .sp-text { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; } }
 @media (max-width: 560px) { .app-header .sync-pill { display: none; } .panel-top .sync-pill:not([hidden]) { display: inline-flex; } }
 
+/* ---------- 11. The event's name (SPEC 2.20) and several draws side by side (SPEC 2.18–2.22) ---------- */
+/* Header chip: "DRAW 2  Newcastle 10-10-2026" (the panel shows it instead on phones) */
+.ev-chip { display: inline-flex; align-items: center; gap: 8px; flex: 0 1 auto; min-width: 0; max-width: min(360px, 32vw); height: 40px; padding: 0 14px; border-radius: 999px; border: 1.5px solid var(--line-strong); background: var(--surface); color: var(--text); font-size: 14px; white-space: nowrap; touch-action: manipulation; }
+.ev-chip.has-badge { padding-left: 5px; }
+.ev-chip:hover { border-color: var(--accent-ink); }
+.draw-badge { flex: none; display: inline-flex; align-items: center; height: 28px; padding: 0 10px; border-radius: 999px; background: linear-gradient(135deg, var(--brand-600), var(--brand-800)); color: #fff; font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.ev-chip-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.ev-chip-name { font-weight: 700; color: var(--heading); }
+.ev-chip-date { margin-left: 8px; color: var(--text-2); font-variant-numeric: tabular-nums; }
+.panel-top .ev-chip { display: none; max-width: 100%; height: 36px; font-size: 13px; }
+@media (max-width: 1023.98px) { .ev-chip { max-width: min(300px, 40vw); } }
+@media (max-width: 760px) { .app-header .ev-chip-date { display: none; } }
+@media (max-width: 560px) { .app-header .ev-chip { display: none; } .panel-top .ev-chip:not([hidden]) { display: inline-flex; } .panel-top .ev-chip-date { display: none; } }
+body.event-mode .ev-chip { display: none; }
+/* Settings → Phone sign-ups: another event is running at the same time */
+.ps-others { font-size: 14px; color: var(--text); background: color-mix(in srgb, var(--brand-600) 9%, var(--surface)); border: 1.5px solid color-mix(in srgb, var(--brand-600) 35%, transparent); border-radius: 12px; padding: 10px 12px; }
+/* "Name your event" and the "draw in use" notice: full-screen organiser steps in the log-in screen's look */
+.evstep .ev-file { font-size: 15px; color: var(--text-2); overflow-wrap: anywhere; margin-top: -6px; }
+.evstep .ev-file strong { color: var(--text); }
+#switchNotice .su-card h2 { font-size: clamp(28px, 3.2vw, 40px); }
+.sw-count { font-size: 20px; font-weight: 700; color: var(--accent-ink); margin-top: -8px; }
+.sw-actions { display: flex; flex-direction: column; gap: 12px; }
+.sw-actions .btn-secondary { min-height: 60px; }
+.sw-actions .sw-mine { align-self: center; font-size: 17px; }
+/* "This draw still holds “…” (from 14:05)." — Continue that event / Start a new event */
+.ev-hold { display: flex; flex-direction: column; gap: 12px; padding: 16px 18px; border-radius: 18px; background: color-mix(in srgb, var(--brand-600) 9%, var(--surface)); border: 2px solid color-mix(in srgb, var(--brand-600) 45%, transparent); }
+:root[data-theme="dark"] .ev-hold { background: color-mix(in srgb, var(--brand-600) 22%, var(--surface)); border-color: color-mix(in srgb, var(--brand-500) 55%, transparent); }
+.ev-hold-text { font-size: 19px; line-height: 1.35; font-weight: 700; color: var(--heading); overflow-wrap: anywhere; }
+.ev-hold-note { font-size: 15px; line-height: 1.4; color: var(--text); margin-top: -4px; }
+.ev-hold-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.ev-hold-actions .btn { flex: 1 1 200px; min-height: 56px; }
+.ev-hold-other { align-self: flex-start; margin: -6px 0 -10px; padding-left: 0; font-size: 16px; }
+/* "Or continue an event that's already running:" (other draws), on the log-in screen and "Name your event" */
+.ev-running { display: flex; flex-direction: column; gap: 10px; padding-top: 6px; border-top: 1px solid var(--line); }
+.ev-running-title { font-size: 16px; font-weight: 700; color: var(--text); padding-top: 12px; }
+.ev-running-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.ev-run-btn { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 52px; padding: 8px 12px 8px 16px; border-radius: 14px; border: 2px solid var(--line-strong); background: var(--surface); color: var(--heading); text-align: left; font-size: 17px; line-height: 1.3; touch-action: manipulation; }
+.ev-run-btn:hover, .ev-run-btn:focus-visible { border-color: var(--brand-600); background: color-mix(in srgb, var(--brand-600) 7%, var(--surface)); }
+.ev-run-btn:disabled { cursor: progress; opacity: .8; }
+.ev-run-text { min-width: 0; overflow-wrap: anywhere; font-weight: 400; }
+.ev-run-text .k { font-weight: 400; color: var(--text-2); }
+.ev-run-text strong { font-weight: 700; }
+.ev-run-btn .ic { flex: none; color: var(--accent-ink); width: 22px; height: 22px; }
+/* Guest: the event's name above the form */
+.su-event { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; margin: -12px 0 -8px; }
+.su-event .eyebrow { color: var(--text-2); }
+.su-event-name { font-size: 19px; line-height: 1.25; color: var(--heading); overflow-wrap: anywhere; }
+/* Guest: "Which event are you at?" — up to ten events, one tappable row each (fits 320 px, scrolls with the page) */
+.su-pick { display: flex; flex-direction: column; gap: 16px; }
+.su-pick-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.su-pick-btn { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 60px; padding: 10px 14px 10px 18px; border-radius: 16px; border: 2px solid var(--line-strong); background: var(--surface); color: var(--heading); text-align: left; touch-action: manipulation; }
+.su-pick-btn:hover, .su-pick-btn:focus-visible { border-color: var(--brand-600); background: color-mix(in srgb, var(--brand-600) 7%, var(--surface)); }
+.su-pick-btn:active { transform: translateY(1px); }
+.su-pick-btn:disabled { cursor: progress; }
+.su-pick-btn .ic { color: var(--accent-ink); width: 24px; height: 24px; }
+.su-pick-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.su-pick-name { font-size: 19px; line-height: 1.25; font-weight: 700; overflow-wrap: anywhere; }
+.su-pick-sub { font-size: 14px; line-height: 1.3; font-weight: 400; color: var(--text-2); overflow-wrap: anywhere; }
+.su-again { display: flex; flex-wrap: wrap; align-items: center; gap: 0 12px; margin: -12px 0 -8px; font-size: 15px; }
+.su-again-ev { color: var(--heading); overflow-wrap: anywhere; }
+.su-again .link-btn { padding-left: 0; font-size: 15px; }
+@media (max-width: 560px) {
+  .su-pick-btn { min-height: 56px; padding: 8px 10px 8px 14px; border-radius: 14px; }
+  .su-pick-name { font-size: 17px; }
+  .su-pick-list { gap: 8px; }
+}
+
 /* ---------- Responsive tweaks ---------- */
 @media (max-width: 1023.98px) {
   .stage-head { display: flex; }
@@ -839,6 +911,7 @@ body.event-mode .srv-banner { display: none; }
   <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
   <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16.5v-5M12 7.5h.01"/></symbol>
   <symbol id="i-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></symbol>
+  <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m9 5 7 7-7 7"/></symbol>
 </svg>
 
 <a class="skip-link" href="#spinBtn">Skip to the SPIN button</a>
@@ -853,6 +926,8 @@ body.event-mode .srv-banner { display: none; }
         <h1 class="brand-title" data-bind="title">Lucky Draw</h1>
         <p class="brand-sub" data-bind="subtitle">Spin to win</p>
       </div>
+      <!-- This event's name (and, on a website with several draws, which draw this is): click to change it -->
+      <button type="button" class="ev-chip" hidden><span class="draw-badge" hidden></span><span class="ev-chip-text"><span class="ev-chip-name"></span><span class="ev-chip-date"></span></span></button>
     </div>
     <nav class="header-actions" aria-label="Display and mode controls">
       <button type="button" class="sync-pill" data-state="connecting" hidden><span class="sp-dot" aria-hidden="true"></span><span class="sp-text">Phone sign-ups: connecting…</span></button>
@@ -881,7 +956,7 @@ body.event-mode .srv-banner { display: none; }
           <canvas id="wheelCanvas" aria-hidden="true"></canvas>
           <canvas class="wheel-spot" id="spotCanvas" aria-hidden="true"></canvas>
           <svg class="bulbs" id="bulbs" data-mode="idle" aria-hidden="true"></svg>
-          <div class="hub" aria-hidden="true"><svg class="logo-mark" viewBox="0 0 294 309"><use href="#map-mark" width="294" height="309"/></svg></div>
+          <div class="hub" aria-hidden="true"><span class="logo-file"></span></div>
           <svg class="pointer" id="pointer" viewBox="0 0 60 84" aria-hidden="true">
             <path d="M30 82 C24 70 8 48 8 30 A22 22 0 0 1 52 30 C52 48 36 70 30 82 Z" fill="#6e006e" stroke="#ffffff" stroke-width="4" stroke-linejoin="round"/>
             <circle cx="30" cy="29" r="13.5" fill="#ffffff"/>
@@ -912,6 +987,7 @@ body.event-mode .srv-banner { display: none; }
     <aside class="panel" id="panel" aria-label="Entries, winners and settings">
       <div class="panel-top">
         <p class="panel-counts" id="panelCounts">0 on the wheel · 0 winners</p>
+        <button type="button" class="ev-chip" hidden><span class="draw-badge" hidden></span><span class="ev-chip-text"><span class="ev-chip-name"></span><span class="ev-chip-date"></span></span></button>
         <button type="button" class="sync-pill" data-state="connecting" hidden><span class="sp-dot" aria-hidden="true"></span><span class="sp-text">Phone sign-ups: connecting…</span></button>
         <div class="panel-actions">
           <button type="button" class="btn btn-secondary btn-excel" data-action="xlsx"><svg class="ic ic-sm" aria-hidden="true"><use href="#i-sheet"/></svg>Download Excel (.xlsx)</button>
@@ -1029,10 +1105,12 @@ body.event-mode .srv-banner { display: none; }
         <fieldset class="set-group" id="phoneSet" hidden>
           <legend>Phone sign-ups</legend>
           <p class="ps-status" id="psStatus"></p>
+          <p class="ps-others" id="psOthers" role="status" hidden></p>
           <div class="field">
             <label for="psAddr">Sign-up address for guests’ phones</label>
             <div class="copy-row"><input class="input" id="psAddr" type="text" readonly aria-describedby="psAddrHelp"><button type="button" class="btn btn-secondary" id="psCopy"><svg class="ic ic-sm" aria-hidden="true"><use href="#i-copy"/></svg>Copy</button></div>
             <p class="card-note" id="psAddrHelp">Make your QR code from this address. Guests who open it see only the sign-up form, and their entries appear here within a few seconds.</p>
+            <p class="card-note" id="psAddrSlots" hidden>It’s the same address for every draw: guests go straight to the event that’s running, and when several are running they pick yours by its event name.</p>
           </div>
           <label class="switch-row" for="psOpen"><span class="sw-text">Sign-ups open<small>Turn off to stop new phone sign-ups. Guests then see “Entries are now closed.”</small></span><input class="switch" id="psOpen" type="checkbox" role="switch" checked></label>
           <div class="btn-row">
@@ -1044,6 +1122,12 @@ body.event-mode .srv-banner { display: none; }
         </fieldset>
         <fieldset class="set-group">
           <legend>Draw</legend>
+          <div class="field">
+            <label for="sEventName">Event name</label>
+            <input class="input" id="sEventName" type="text" maxlength="60" autocomplete="off" autocapitalize="words" aria-describedby="sEventNameErr sEventNameHelp">
+            <p class="card-note" id="sEventNameHelp">Names your Excel files, e.g. “Newcastle 10-10-2026.xlsx”.</p>
+            <p class="err" id="sEventNameErr" hidden></p>
+          </div>
           <div class="field"><label for="sTitle">Draw title</label><input class="input" id="sTitle" type="text" maxlength="60" data-setting="title"></div>
           <div class="field"><label for="sSubtitle">Subtitle</label><input class="input" id="sSubtitle" type="text" maxlength="80" data-setting="subtitle"></div>
           <div class="field"><label for="sPrize">Prize for the next round</label><input class="input" id="sPrize" type="text" maxlength="120" placeholder="e.g. Weekend for two" data-setting="prize"></div>
@@ -1143,6 +1227,14 @@ body.event-mode .srv-banner { display: none; }
   </div>
   <div class="su-main">
     <div class="su-card" id="suCard">
+      <!-- Several events at once (one QR code): the guest picks theirs by its name (SPEC 2.19, 2.22) -->
+      <div class="su-pick" id="suPick" hidden>
+        <h2 id="suPickHeading" tabindex="-1">Which event are you at?</h2>
+        <p class="su-lead">Tap your event to enter its draw.</p>
+        <ul class="su-pick-list" id="suPickList" aria-labelledby="suPickHeading"></ul>
+      </div>
+      <p class="su-again" id="suAgainRow" hidden><strong class="su-again-ev" id="suAgainEv" dir="auto"></strong><button type="button" class="link-btn" id="suAgain">Not your event? Choose again</button></p>
+      <p class="su-event" id="suEvent" hidden><span class="eyebrow">Event</span><strong class="su-event-name" id="suEventName" dir="auto"></strong></p>
       <form class="su-form" id="suForm" novalidate autocomplete="off" aria-describedby="suNotice">
         <h2 id="suHeading" tabindex="-1">Enter the draw</h2>
         <p class="su-lead">Takes a few seconds. Winners are picked at random.</p>
@@ -1167,6 +1259,8 @@ body.event-mode .srv-banner { display: none; }
         </div>
         <label class="check" for="suConsent"><input type="checkbox" id="suConsent" aria-describedby="suConsentErr" required><span id="suConsentText">I agree that MAP may store my details to run this draw and contact me if I win.</span></label>
         <p class="err" id="suConsentErr" hidden></p>
+        <label class="check" for="suAdult"><input type="checkbox" id="suAdult" aria-describedby="suAdultErr" required><span>I confirm I am aged 18 or over.</span></label>
+        <p class="err" id="suAdultErr" hidden></p>
         <label class="check" for="suMarketing" id="suMarketingRow"><input type="checkbox" id="suMarketing"><span><span id="suMarketingText">Keep me updated with news and offers from MAP.</span> <span class="opt-tag">(optional)</span></span></label>
         <button type="submit" class="btn btn-primary btn-block su-submit">Enter the draw</button>
         <p class="su-fine" id="suFine">Your details stay on this device and are only used as described above.</p>
@@ -1175,6 +1269,7 @@ body.event-mode .srv-banner { display: none; }
         <div class="su-tick" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></div>
         <h2 class="su-success-title" id="suSuccessTitle" tabindex="-1">You’re entered into the raffle!</h2>
         <p class="su-success-sub" id="suSuccessText">Thank you. You may now close this window.</p>
+        <p class="su-home" id="suHome" hidden>Taking you to themaap.co.uk…</p>
         <button type="button" class="btn btn-primary btn-lg" id="suClose" hidden>Close window</button>
       </div>
       <div class="su-state" id="suState" hidden role="status" aria-live="polite">
@@ -1195,7 +1290,7 @@ body.event-mode .srv-banner { display: none; }
     <div class="su-brand-text">
       <p class="su-kicker">Organiser</p>
       <p class="su-title" id="liTitle">Lucky Draw</p>
-      <p class="su-sub">Phone sign-ups live</p>
+      <p class="su-sub" id="liSub">Phone sign-ups live</p>
     </div>
   </div>
   <div class="su-main">
@@ -1212,6 +1307,82 @@ body.event-mode .srv-banner { display: none; }
         <button type="submit" class="btn btn-primary btn-block su-submit" id="liSubmit">Log in</button>
         <p class="li-note">Guests don’t need this: they use the same address without “#wheel”.</p>
       </form>
+      <div class="ev-running" id="liRunning" hidden>
+        <p class="ev-running-title" id="liRunningTitle">Or continue an event that’s already running:</p>
+        <ul class="ev-running-list" aria-labelledby="liRunningTitle"></ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Organiser: this draw is already running on another laptop, so this one is offered the first free draw
+     (SPEC 2.18 C, 2.21, 2.22) -->
+<section class="signup login" id="switchNotice" hidden aria-labelledby="swHeading">
+  <div class="su-brand">
+    <svg class="su-watermark" viewBox="0 0 294 309" aria-hidden="true" focusable="false"><use href="#map-mark" width="294" height="309"/></svg>
+    <span class="logo-plate su-logo-stacked"><span class="logo-file logo-lockup" role="img" aria-label="MAP — Your way home"></span></span>
+    <span class="logo-plate logo-h su-logo-h" role="img" aria-label="MAP — Your way home"><span class="logo-file"></span></span>
+    <div class="su-brand-text">
+      <p class="su-kicker">Organiser</p>
+      <p class="su-title" id="swBrandTitle">Draw 1</p>
+      <p class="su-sub">In use on another laptop</p>
+    </div>
+  </div>
+  <div class="su-main">
+    <div class="su-card">
+      <h2 id="swHeading" tabindex="-1">Draw 1 is already being used by another laptop.</h2>
+      <p class="sw-count" id="swCount">Taking you to Draw 2 in 5…</p>
+      <p class="su-notice" id="swGuests"><svg class="ic" aria-hidden="true"><use href="#i-info"/></svg><span>Guests use the same QR code — they’ll be asked to pick your event by name.</span></p>
+      <div class="sw-actions">
+        <button type="button" class="btn btn-primary btn-block su-submit" id="swGo">Go to Draw 2 now</button>
+        <button type="button" class="btn btn-secondary btn-block btn-lg" id="swStay">Stay on Draw 1 (same event)</button>
+        <button type="button" class="link-btn sw-mine" id="swMine">This is my event — continue it</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- "Name your event": always before the wheel opens (SPEC 2.20). The name goes with the event and names the
+     Excel files, e.g. "Newcastle 10-10-2026.xlsx". -->
+<section class="signup login evstep" id="evStep" hidden aria-labelledby="evHeading">
+  <div class="su-brand">
+    <svg class="su-watermark" viewBox="0 0 294 309" aria-hidden="true" focusable="false"><use href="#map-mark" width="294" height="309"/></svg>
+    <span class="logo-plate su-logo-stacked"><span class="logo-file logo-lockup" role="img" aria-label="MAP — Your way home"></span></span>
+    <span class="logo-plate logo-h su-logo-h" role="img" aria-label="MAP — Your way home"><span class="logo-file"></span></span>
+    <div class="su-brand-text">
+      <p class="su-kicker">Organiser</p>
+      <p class="su-title" data-bind="title">Lucky Draw</p>
+      <p class="su-sub" id="evBrandSub">Before the wheel opens</p>
+    </div>
+  </div>
+  <div class="su-main">
+    <div class="su-card">
+      <form class="su-form" id="evForm" novalidate autocomplete="off">
+        <h2 id="evHeading" tabindex="-1">Name your event</h2>
+        <p class="su-lead">Give this event a name before the wheel opens. It names your Excel file.</p>
+        <!-- This draw still holds an event (left by another laptop, or this one before): continue it or start afresh (SPEC 2.23, 2.24) -->
+        <div class="ev-hold" id="evHold" hidden role="group" aria-labelledby="evHoldText">
+          <p class="ev-hold-text" id="evHoldText"></p>
+          <p class="ev-hold-note" id="evHoldNote" hidden></p>
+          <div class="ev-hold-actions">
+            <button type="button" class="btn btn-primary btn-lg" id="evContinue">Continue that event</button>
+            <button type="button" class="btn btn-secondary btn-lg" id="evStartNew">Start a new event</button>
+          </div>
+          <button type="button" class="link-btn ev-hold-other" id="evOtherDraw" hidden>Use another draw</button>
+        </div>
+        <p class="su-notice" id="evOthers" hidden><svg class="ic" aria-hidden="true"><use href="#i-info"/></svg><span>Another event is running at the same time. Guests will pick your event by this name.</span></p>
+        <div class="field">
+          <label for="evName">Event name</label>
+          <input class="input" id="evName" type="text" maxlength="60" autocomplete="off" autocapitalize="words" spellcheck="false" enterkeyhint="go" placeholder="e.g. Newcastle" aria-describedby="evNameErr evFile" required>
+          <p class="err" id="evNameErr" hidden></p>
+        </div>
+        <p class="ev-file" id="evFile"></p>
+        <button type="submit" class="btn btn-primary btn-block su-submit" id="evSubmit">Open the wheel</button>
+      </form>
+      <div class="ev-running" id="evRunning" hidden>
+        <p class="ev-running-title" id="evRunningTitle">Or continue an event that’s already running:</p>
+        <ul class="ev-running-list" aria-labelledby="evRunningTitle"></ul>
+      </div>
     </div>
   </div>
 </section>
@@ -1311,6 +1482,10 @@ body.event-mode .srv-banner { display: none; }
 const TAU = Math.PI * 2;
 const FONT = '"Helvetica Neue", Helvetica, Arial, "Liberation Sans", sans-serif';
 const SVGNS = 'http://www.w3.org/2000/svg';
+/* After a guest has entered on their own phone (or in a sign-up window on the website), the confirmation shows for
+   HOME_DELAY_MS, then the page goes to the client's home page (SPEC 2.25). Never from file:// or over the wheel. */
+const HOME_URL = 'https://themaap.co.uk/';
+const HOME_DELAY_MS = 3000;
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
@@ -1398,12 +1573,35 @@ const IS_HTTP = location.protocol === 'http:' || location.protocol === 'https:';
 const WANT_WHEEL = location.hash.toLowerCase() === '#wheel' || new URLSearchParams(location.search).has('wheel');
 let appMode = 'offline';
 
+/* Up to ten draws side by side (SPEC 2.18–2.22): the same index.html + api.php are uploaded into these folders
+   next to each other on the website, e.g. /draw/ … /draw10/. Each folder is its own draw ("Draw 1" … "Draw 10").
+   Guests all scan the first folder's address and are sent to the event that is running (or pick it by name);
+   an organiser who opens a draw that another laptop is using is offered the first free one. Folders that
+   aren't uploaded are simply skipped. A page in any other folder (or on file://) never switches. */
+const DRAW_SLOTS = ['draw', 'draw2', 'draw3', 'draw4', 'draw5', 'draw6', 'draw7', 'draw8', 'draw9', 'draw10'];
+const FOLDER_PATH = IS_HTTP ? location.pathname.replace(/[^/]*$/, '') : ''; // "/draw/" for /draw/ and /draw/index.html
+const PAGE_SLOT = (() => {
+  const m = FOLDER_PATH.match(/^(.*\/)([^/]+)\/$/);
+  const i = m ? DRAW_SLOTS.indexOf(m[2]) : -1;
+  return i < 0 ? null : { name: m[2], index: i, parent: m[1], label: `Draw ${i + 1}` };
+})();
+/** A slot's folder address on this website (same origin, same parent folder). */
+const slotInfo = name => {
+  const i = DRAW_SLOTS.indexOf(name);
+  const dir = PAGE_SLOT.parent + name + '/';
+  return { name, index: i, label: `Draw ${i + 1}`, dir, url: location.origin + dir, apiUrl: location.origin + dir + 'api.php' };
+};
+/* On a website every draw folder keeps its own browser storage (wheel, cursors, log-in flag, "already entered"),
+   its own window-to-window channel and its own sign-up window, so /draw/ and /draw2/ never mix. file:// keeps
+   the original names. */
+const KEY_SUFFIX = IS_HTTP ? ':' + FOLDER_PATH : '';
+
 /* ---------------------------------------------------------------------
    1. State & storage (localStorage + BroadcastChannel, merge by record)
    --------------------------------------------------------------------- */
-const STORE_KEY = 'map-lucky-draw:v1';
-const GUIDE_KEY = 'map-lucky-draw:guide-seen:v1';
-const CHANNEL_NAME = 'map-lucky-draw';
+const STORE_KEY = 'map-lucky-draw:v1' + KEY_SUFFIX;
+const GUIDE_KEY = 'map-lucky-draw:guide-seen:v1' + KEY_SUFFIX;
+const CHANNEL_NAME = 'map-lucky-draw' + KEY_SUFFIX;
 const DEFAULT_CONSENT = 'I agree that MAP may store my details to run this draw and contact me if I win.';
 const DEFAULT_MARKETING = 'Keep me updated with news and offers from MAP.';
 const DEFAULTS = Object.freeze({
@@ -1421,14 +1619,30 @@ const SOURCE_LABEL = { manual: 'Manual', signup: 'Sign-up', import: 'Import', de
 const STATUS_LABEL = { active: 'On wheel', won: 'Winner', removed: 'Removed' };
 
 let lastStamp = 0;
+/* On a draw several laptops can change the same event, so their edits are timed by the web server's clock (each
+   laptop measures how far its own clock is off when it talks to api.php); offline it is simply this computer's clock. */
+let clockSkew = 0;
 /** Strictly increasing per-tab timestamp used for last-writer-wins merging. */
-function stamp() { const n = Date.now(); lastStamp = n > lastStamp ? n : lastStamp + 1; return lastStamp; }
+function stamp() { const n = Date.now() + clockSkew; lastStamp = n > lastStamp ? n : lastStamp + 1; return lastStamp; }
 function uid() {
   const a = new Uint32Array(3);
   crypto.getRandomValues(a);
   return Array.from(a, x => x.toString(36).padStart(7, '0')).join('').slice(0, 20);
 }
 const TAB_ID = uid();
+/* This browser (per draw folder): a winner card that is still open belongs to the laptop that drew it (SPEC 2.24).
+   A random id, made only when a wheel needs it (never on a guest's phone) and never sent anywhere but this draw. */
+let deviceIdCache = '';
+function deviceId() {
+  if (deviceIdCache) return deviceIdCache;
+  const k = 'map-lucky-draw:device:v1' + KEY_SUFFIX;
+  try {
+    let v = localStorage.getItem(k);
+    if (!v || !/^[a-z0-9]{8,32}$/.test(v)) { v = 'd' + uid().slice(0, 15); localStorage.setItem(k, v); }
+    deviceIdCache = v;
+  } catch (e) { deviceIdCache = 'd' + TAB_ID.slice(0, 15); }
+  return deviceIdCache;
+}
 
 const str = (v, max) => (typeof v === 'string' ? v : v == null ? '' : String(v)).slice(0, max);
 const strLine = (v, max) => Array.from(cleanLine(v)).slice(0, max).join('');
@@ -1442,7 +1656,8 @@ function cleanEntry(e) {
     weight: clamp(Number.isFinite(w) ? w : 1, 1, 100), consent: !!e.consent, marketing: !!e.marketing,
     consentAt: e.consentAt ? str(e.consentAt, 40) : null, createdAt: str(e.createdAt, 40) || new Date().toISOString(),
     source: SOURCES.includes(e.source) ? e.source : 'manual', status: STATUSES.includes(e.status) ? e.status : 'active',
-    pos: num(e.pos, 0), updatedAt: num(e.updatedAt, 0)
+    pos: num(e.pos, 0), updatedAt: num(e.updatedAt, 0),
+    ...(e.adult === true ? { adult: true } : {}) // signed up with "I confirm I am aged 18 or over" ticked (SPEC 2.25)
   };
 }
 function cleanLog(r) {
@@ -1466,6 +1681,7 @@ function cleanSettings(s) {
   if (!['duo', 'spectrum'].includes(out.palette)) out.palette = 'duo';
   if (!['full', 'short'].includes(out.labels)) out.labels = 'full';
   if (out.pin && !/^\d{4,8}$/.test(out.pin)) out.pin = '';
+  out.prizeAt = num(s.prizeAt, 0); // when the prize box last changed (it belongs to the event, shared with other laptops)
   out.title = str(cleanText(out.title), 60); out.subtitle = str(cleanText(out.subtitle), 80); out.prize = str(cleanText(out.prize), 120);
   out.consentText = str(cleanText(out.consentText), 400); out.marketingText = str(cleanText(out.marketingText), 200);
   out.updatedAt = num(s.updatedAt, 0);
@@ -1474,15 +1690,45 @@ function cleanSettings(s) {
 function freshState() {
   return {
     v: 1, epoch: { id: 'initial', at: 0 }, entries: [], log: [], tomb: {},
-    settings: cleanSettings(null), meta: { round: 0, pending: null, updatedAt: 0 }
+    settings: cleanSettings(null), meta: { round: 0, updatedAt: 0 }, ev: cleanEv(null), pend: {}, srv: { id: '', at: 0, ev: '' }
   };
 }
-/** meta.pending: the draw whose winner card is (or was, before a reload) open and still needs an action. */
+/** The event's name and date (SPEC 2.20): part of this event's state, not a setting, so "New event" clears it.
+    date = the local date the name was first set, DD-MM-YYYY; both name the Excel files. */
+const EVENT_NAME_MAX = 60;
+const DMY_RE = /^(0[1-9]|[12]\d|3[01])-(0[1-9]|1[0-2])-\d{4}$/;
+function cleanEventName(v) { return Array.from(cleanLine(v)).slice(0, EVENT_NAME_MAX).join('').trim(); }
+function cleanEv(e) {
+  if (!e || typeof e !== 'object') return { name: '', date: '', at: 0, updatedAt: 0 };
+  const name = cleanEventName(e.name);
+  // at: when the event was first named (ms), shown as "This draw still holds “…” (from 14:05)."
+  return { name, date: name && typeof e.date === 'string' && DMY_RE.test(e.date) ? e.date : '', at: name ? num(e.at, 0) : 0, updatedAt: num(e.updatedAt, 0) };
+}
+function todayDMY(d = new Date()) { return `${pad2(d.getDate())}-${pad2(d.getMonth() + 1)}-${d.getFullYear()}`; }
+/** A winner card that is (or was, before a reload) open and still needs an action: one per laptop (state.pend,
+    keyed by deviceId(); { logId: '' } = finished). Only the laptop that drew the winner shows the card. */
 function cleanPending(p) {
   if (!p || typeof p !== 'object' || !p.logId) return null;
   return { logId: str(p.logId, 64), redraw: !!p.redraw, marked: !!p.marked };
 }
-function cleanState(raw) {
+function cleanPend(raw) {
+  const out = {};
+  if (!raw || typeof raw !== 'object') return out;
+  for (const [k, v] of Object.entries(raw).slice(0, 200)) {
+    if (!v || typeof v !== 'object' || !/^[A-Za-z0-9_-]{1,40}$/.test(k)) continue;
+    const p = cleanPending(v);
+    out[k] = { logId: p ? p.logId : '', redraw: !!(p && p.redraw), marked: !!(p && p.marked), updatedAt: num(v.updatedAt, 0) };
+    // claim: the person this laptop is drawing right now (its wheel is turning), so no other laptop draws them too;
+    // claimFor: how long that draw takes at most (ms), after which the claim lapses (that laptop went away mid-spin)
+    if (!p && typeof v.claim === 'string' && v.claim) {
+      out[k].claim = str(v.claim, 64); out[k].claimAt = num(v.claimAt, 0);
+      if (num(v.claimFor, 0) > 0) out[k].claimFor = num(v.claimFor, 0);
+    }
+  }
+  return out;
+}
+/** legacy: a state saved by this browser before winner cards were per laptop (its meta.pending was this laptop's). */
+function cleanState(raw, { legacy = true } = {}) {
   if (!raw || typeof raw !== 'object') return null;
   const s = freshState();
   if (raw.epoch && raw.epoch.id) s.epoch = { id: str(raw.epoch.id, 64), at: num(raw.epoch.at, 0) };
@@ -1490,7 +1736,15 @@ function cleanState(raw) {
   s.log = (Array.isArray(raw.log) ? raw.log : []).map(cleanLog).filter(Boolean);
   if (raw.tomb && typeof raw.tomb === 'object') for (const [k, v] of Object.entries(raw.tomb)) if (Number.isFinite(+v)) s.tomb[k] = +v;
   s.settings = cleanSettings(raw.settings);
-  if (raw.meta) s.meta = { round: Math.max(0, Math.floor(num(raw.meta.round, 0))), pending: cleanPending(raw.meta.pending), updatedAt: num(raw.meta.updatedAt, 0) };
+  if (raw.meta) s.meta = { round: Math.max(0, Math.floor(num(raw.meta.round, 0))), updatedAt: num(raw.meta.updatedAt, 0) };
+  s.ev = cleanEv(raw.ev);
+  s.pend = cleanPend(raw.pend);
+  if (legacy && !raw.pend && raw.meta && cleanPending(raw.meta.pending)) {
+    s.pend[deviceId()] = { ...cleanPending(raw.meta.pending), updatedAt: Math.max(1, num(raw.meta.updatedAt, 1)) };
+  }
+  // srv: the web server's epoch (api.php) this event belongs to, on a draw ('' = not known / offline), and the server's
+  // id of the event itself (ev: kept when only the sign-ups are cleared, new on "New event")
+  if (raw.srv && typeof raw.srv === 'object') s.srv = { id: str(raw.srv.id, 64), at: num(raw.srv.at, 0), ev: str(raw.srv.ev, 64) };
   sortEntries(s.entries);
   return s;
 }
@@ -1513,14 +1767,43 @@ function mergeStates(a, b) {
     for (const r of lb) { const cur = map.get(r.id); if (!cur || r.updatedAt > cur.updatedAt) map.set(r.id, r); }
     return Array.from(map.values()).filter(r => !(tomb[r.id] >= r.updatedAt));
   };
+  const pend = { ...a.pend };
+  for (const [k, p] of Object.entries(b.pend)) if (!pend[k] || p.updatedAt > pend[k].updatedAt) pend[k] = p;
   return {
     v: 1, epoch: a.epoch, tomb,
     entries: sortEntries(mergeList(a.entries, b.entries)),
     log: mergeList(a.log, b.log),
     settings: b.settings.updatedAt > a.settings.updatedAt ? b.settings : a.settings,
-    meta: b.meta.updatedAt > a.meta.updatedAt ? b.meta : a.meta
+    meta: b.meta.updatedAt > a.meta.updatedAt ? b.meta : a.meta,
+    ev: b.ev.updatedAt > a.ev.updatedAt ? b.ev : a.ev,
+    pend,
+    srv: b.srv.at > a.srv.at ? b.srv : a.srv
   };
 }
+/** This laptop's open winner card (or null). */
+function myPending() {
+  const p = state.pend[deviceId()];
+  return p && p.logId ? p : null;
+}
+/** Remember (p) or finish (null) this laptop's open winner card. */
+function setMyPending(p) {
+  state.pend = { ...state.pend, [deviceId()]: { logId: p ? p.logId : '', redraw: !!(p && p.redraw), marked: !!(p && p.marked), updatedAt: stamp() } };
+}
+/* Another laptop on this draw is drawing these people right now (its claim lasts as long as its spin, at most a
+   minute): they're left off this laptop's wheel until that draw lands (SPEC 2.24: never drawn on two laptops), and
+   this laptop doesn't start a draw of its own meanwhile (one winner at a time on a draw). */
+const CLAIM_MS = 60000;
+function claimedElsewhere() {
+  const out = new Set();
+  const now = Date.now() + clockSkew;
+  const me = deviceId();
+  for (const [k, p] of Object.entries(state.pend)) {
+    if (k !== me && p.claim && Math.abs(now - p.claimAt) < Math.min(CLAIM_MS, p.claimFor || CLAIM_MS)) out.add(p.claim);
+  }
+  return out;
+}
+/** A winner is being drawn on another laptop of this draw right now. */
+const othersDrawing = () => appMode === 'organiser' && claimedElsewhere().size > 0;
 
 let state = freshState();
 const S = () => state.settings;
@@ -1570,8 +1853,9 @@ function commit() {
   persist();
   broadcast();
   renderAll();
+  evChanged();
 }
-const persistSoon = debounce(() => { persist(); broadcast(); }, 300);
+const persistSoon = debounce(() => { persist(); broadcast(); evChanged(); }, 300);
 /** True when `a` holds something `b` lacks (a record, a newer edit or tombstone, newer settings/meta or epoch). */
 function hasNewer(a, b) {
   if (a.epoch.id !== b.epoch.id) return mergeStates(a, b) === a;
@@ -1582,7 +1866,9 @@ function hasNewer(a, b) {
   };
   if (newerList(a.entries, b.entries) || newerList(a.log, b.log)) return true;
   for (const [k, v] of Object.entries(a.tomb)) if (!(b.tomb[k] >= v)) return true;
-  return a.settings.updatedAt > b.settings.updatedAt || a.meta.updatedAt > b.meta.updatedAt;
+  for (const [k, p] of Object.entries(a.pend)) if (!b.pend[k] || p.updatedAt > b.pend[k].updatedAt) return true;
+  return a.settings.updatedAt > b.settings.updatedAt || a.meta.updatedAt > b.meta.updatedAt || a.ev.updatedAt > b.ev.updatedAt
+    || a.srv.at > b.srv.at;
 }
 function applyRemote(remote) {
   if (!remote) return;
@@ -1590,12 +1876,16 @@ function applyRemote(remote) {
   // Two windows can save at the same moment and one write can overwrite the other. If this window still holds
   // records the other side lacks, save the merged state (and tell the others) so nothing is lost on reload.
   if (hasNewer(state, remote)) { persist(); broadcast(); }
-  // This window's winner card was finished in another window (e.g. both reopened it after a reload): close it.
+  checkWinnerCard();
+  renderAll();
+}
+/** This window's winner card was finished in another window (e.g. both reopened it after a reload), or taken over
+    by another laptop: close it. */
+function checkWinnerCard() {
   if (winnerOpen && currentWin && !spinning) {
-    const p = state.meta.pending;
+    const p = myPending();
     if (!p || p.logId !== currentWin.rec.id) dismissWinnerCard();
   }
-  renderAll();
 }
 /* A window opened later asks the others for the current state ("hello"). This matters when storage is blocked:
    without it a new sign-up window would start empty (no PIN, default texts, no duplicate check). */
@@ -1655,7 +1945,7 @@ function makeEntry(f, source, pos) {
     id: 'e' + uid(), name: f.name, number: f.number || '', email: f.email || '',
     weight: clamp(parseInt(f.weight, 10) || 1, 1, 100), consent, marketing: !!f.marketing,
     consentAt: consent ? (f.consentAt || now) : null, createdAt: now, source, status: 'active',
-    pos: pos == null ? nextPos() : pos, updatedAt: stamp()
+    pos: pos == null ? nextPos() : pos, updatedAt: stamp(), ...(f.adult === true ? { adult: true } : {})
   };
 }
 function tombstone(id) { state.tomb[id] = stamp(); }
@@ -1899,11 +2189,12 @@ function wheelLabel(e) {
 /** True when the first strong (letter) character is right-to-left (Hebrew, Arabic, Syriac, Thaana, N’Ko…). */
 const RTL_FIRST_RE = /^[^\p{L}]*[֐-ࣿיִ-﷿ﹰ-﻿\u{10800}-\u{10FFF}\u{1E800}-\u{1EFFF}]/u;
 const isRtl = text => RTL_FIRST_RE.test(text);
-function isLocked() { return spinning || winnerOpen; }
+function isLocked() { return spinning || winnerOpen || !!spinPrep; }
 
 function rebuildWheel() {
   // Copied by value, so nothing saved during a draw can change the frozen wheel or the winner's log record.
-  wheelEntries = activeEntries().map(e => ({ ...e }));
+  const busy = claimedElsewhere();
+  wheelEntries = activeEntries().filter(e => !busy.has(e.id)).map(e => ({ ...e }));
   wheelSegs = buildSegments(wheelEntries);
   wheelDirty = false;
   drawWheel();
@@ -1998,7 +2289,7 @@ function drawWheel() {
       ctx.stroke();
     }
     // Labels: radial, bold, sized to the segment, truncated with an ellipsis, hidden when too thin.
-    const hubR = Sz * 0.105;
+    const hubR = Math.max(Sz * 0.32, Math.min(120, Sz * 0.4)) / 2; // the hub (CSS --hub)
     const outer = Rs - Math.max(6, Sz * 0.024);
     const inner = hubR + Sz * 0.02;
     const maxLen = outer - inner;
@@ -2184,6 +2475,9 @@ function scheduleMeasure() { cancelAnimationFrame(measureRaf); measureRaf = requ
    --------------------------------------------------------------------- */
 let spinning = false;
 let spinPromise = null;
+let spinPrep = null;      // organiser on a draw: the quick look at the server just before a spin (see spin())
+let evRedraw = null;      // { round, prize }: a no-show redraw that waited while another laptop of the draw was drawing
+const DRAWING_ELSEWHERE_MSG = 'A winner is being drawn on the other laptop — wait for it to land.';
 let winnerOpen = false;   // a winner is being revealed or shown: the wheel stays locked until an action is chosen
 let currentWin = null;
 let drawRound = 0;        // round of the draw in progress; written to state only when the wheel lands
@@ -2218,18 +2512,47 @@ function pointerLoop(now) {
 /**
  * Spin the wheel. Resolves with (a copy of) the winning entry once it has landed, or null.
  * opts.redraw = { round, prize } re-draws the same round after a no-show.
+ * Organiser on a draw (SPEC 2.24): first a quick look at the server, so people another laptop on this draw has
+ * already drawn are off the wheel (a second or two at most; without an answer the spin just goes ahead).
  */
 function spin(opts = {}) {
   if (spinning) return spinPromise;
+  if (spinPrep) return spinPrep;
   if (signupOpen) return Promise.resolve(null);
   if (winnerOpen) finishWinner(defaultWinnerAction());
-  if (wheelDirty) rebuildWheel();
+  if (!evOn()) return spinNow(opts);
+  if (!opts.redraw && evRedraw) opts = { ...opts, redraw: evRedraw }; // a no-show redraw that had to wait (see below)
+  const go = pick => {
+    spinPrep = null;
+    if (pick && pick.busy) {
+      // One winner at a time on a draw: another laptop is drawing right now (R1-2). A no-show redraw keeps its round.
+      evDropClaim();
+      if (opts.redraw) evRedraw = opts.redraw;
+      toast(DRAWING_ELSEWHERE_MSG, { detail: opts.redraw ? `Then press SPIN to draw again for round ${opts.redraw.round}.` : 'Then press SPIN again.' });
+      renderAll();
+      return Promise.resolve(null);
+    }
+    if (opts.redraw && opts.redraw === evRedraw) evRedraw = null;
+    const p = spinNow(opts, pick);
+    if (!spinning) renderAll(); // no spin after all (e.g. nobody left): the controls come back
+    return p;
+  };
+  spinPrep = evPrepareSpin().then(go, () => go(null));
+  renderAll();
+  return spinPrep;
+}
+/** pick: { id } of the winner already chosen (and claimed on the server) by evPrepareSpin, else chosen here. */
+function spinNow(opts, pick = null) {
+  if (spinning) return spinPromise;
+  if (signupOpen || winnerOpen || evStepOpen) { if (pick) evDropClaim(); return Promise.resolve(null); }
+  if (wheelDirty || pick) rebuildWheel();
   const entries = wheelEntries.slice();
-  if (!entries.length) { toast('Add entries to start.'); return Promise.resolve(null); }
+  if (!entries.length) { if (pick) evDropClaim(); toast('Add entries to start.'); return Promise.resolve(null); }
   audioContext();
 
   // 1) pick the winner with crypto randomness (weighted)
-  const winIdx = pickWeightedIndex(entries.map(e => e.weight));
+  const picked = pick ? entries.findIndex(e => e.id === pick.id) : -1;
+  const winIdx = picked >= 0 ? picked : pickWeightedIndex(entries.map(e => e.weight));
   const seg = wheelSegs[winIdx];
   const span = seg.end - seg.start;
   // 2) choose a landing point inside that segment, ≥12% away from both edges (centre for tiny segments)
@@ -2320,11 +2643,13 @@ function onLanded(entry, round, prize, idx, redraw) {
   const marked = !!(S().removeWinners && live && live.status === 'active');
   if (marked) { live.status = 'won'; live.updatedAt = stamp(); }
   // The round only counts once a winner is drawn, so closing the page mid-spin never skips a number.
-  // meta.pending remembers the open card, so a reload shows it again for the operator to finish.
-  state.meta = { ...state.meta, round: Math.max(state.meta.round, round), pending: { logId: rec.id, redraw: !!redraw, marked }, updatedAt: stamp() };
+  // This laptop's pending card is remembered, so a reload shows it again for the operator to finish.
+  state.meta = { ...state.meta, round: Math.max(state.meta.round, round), updatedAt: stamp() };
+  setMyPending({ logId: rec.id, redraw: !!redraw, marked });
   winnerOpen = true;
   currentWin = { rec, entryId: entry.id, redraw: !!redraw, marked };
   commit();
+  evPushNow(); // other laptops on this draw see the winner (and that they're off the wheel) straight away
   playFanfare();
   drawSpotlight(idx);
   setBulbMode('party');
@@ -2501,24 +2826,24 @@ function openWinnerDialog(rec, { quiet = false } = {}) {
   first.className = 'btn btn-primary btn-xl wd-primary';
   second.className = 'btn btn-secondary btn-lg';
   actions.replaceChildren(first, second, btnNo);
-  $('#wdHint').textContent = (currentWin && currentWin.restored ? 'Reopened after the page reloaded. ' : '') + `Esc = ${primary === 'remove' ? 'Remove from wheel' : 'Keep on wheel'}`;
+  $('#wdHint').textContent = (currentWin && currentWin.restored ? (currentWin.adopted ? 'Reopened from the laptop that drew it. ' : 'Reopened after the page reloaded. ') : '') + `Esc = ${primary === 'remove' ? 'Remove from wheel' : 'Keep on wheel'}`;
   try { if (!winnerDialog.open) winnerDialog.showModal(); } catch (e) { winnerDialog.setAttribute('open', ''); }
   first.focus();
   if (!quiet) startConfetti();
 }
 /** A reload (or a crash) while a winner card was open: show that card again so the operator can still choose. */
 function restorePendingWinner() {
-  const p = state.meta.pending;
+  const p = myPending();
   if (!p) return false;
   const rec = state.log.find(r => r.id === p.logId);
   if (!rec || rec.type !== 'Winner') {
-    state.meta = { ...state.meta, pending: null, updatedAt: stamp() };
+    setMyPending(null);
     commit();
     return false;
   }
   winnerOpen = true;
   drawRound = rec.round;
-  currentWin = { rec, entryId: rec.entryId, redraw: p.redraw, marked: p.marked, restored: true };
+  currentWin = { rec, entryId: rec.entryId, redraw: p.redraw, marked: p.marked, restored: true, adopted: evAdoptedCard === p.logId };
   renderAll();
   openWinnerDialog(rec, { quiet: true });
   return true;
@@ -2567,11 +2892,13 @@ function finishWinner(action) {
   }
   // A confirmed winner has had the prize, so it doesn't carry into the next round unnoticed (the box then shows
   // "Last prize: …" as a hint). A no-show keeps it for the redraw. A prize typed during the spin is left alone.
-  if (action !== 'noshow' && rec.prize && cleanLine(S().prize) === rec.prize) state.settings = { ...S(), prize: '', updatedAt: stamp() };
-  if (state.meta.pending && state.meta.pending.logId === rec.id) state.meta = { ...state.meta, pending: null, updatedAt: stamp() };
+  if (action !== 'noshow' && rec.prize && cleanLine(S().prize) === rec.prize) state.settings = { ...S(), prize: '', prizeAt: stamp(), updatedAt: stamp() };
+  const mine = myPending();
+  if (mine && mine.logId === rec.id) setMyPending(null);
   stopConfetti();
   if (winnerDialog.open) winnerDialog.close();
   commit();
+  evPushNow();
   if (action === 'noshow') {
     if (activeEntries().length) {
       toast(`${rec.name} marked as a no-show. Drawing again for round ${rec.round}…`);
@@ -3089,6 +3416,14 @@ function csvCell(v) {
   return s;
 }
 function toCSV(rows) { return '\uFEFF' + rows.map(r => r.map(csvCell).join(',')).join('\r\n') + '\r\n'; }
+/** An event name made safe for a file name (SPEC 2.20): \ / : * ? " < > | and control characters removed,
+    spaces collapsed, trimmed, at most 80 characters (no leading dots); "Lucky Draw" when empty. */
+function safeFileName(name) {
+  const s = cleanText(String(name == null ? '' : name).replace(/[\u0000-\u001F\u007F-\u009F\\/:*?"<>|]/g, '')).replace(/\s+/g, ' ').trim().replace(/^[.\s]+/, '');
+  return Array.from(s).slice(0, 80).join('').trim() || 'Lucky Draw';
+}
+/** "<Event name> <DD-MM-YYYY>", e.g. "Newcastle 10-10-2026": the start of every exported file's name. */
+function exportStem() { return `${safeFileName(state.ev.name)} ${state.ev.date || todayDMY()}`; }
 const logChrono = () => state.log.slice().sort((a, b) => (a.at < b.at ? -1 : a.at > b.at ? 1 : a.round - b.round));
 function winnersCSV() {
   const rows = [['Round', 'Prize', 'Name', 'Number', 'Email', 'Type', 'Time']];
@@ -3210,7 +3545,7 @@ function buildXlsx() {
       + '<Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties" Target="docProps/app.xml"/>'
       + '</Relationships>' },
     { name: 'docProps/core.xml', data: X + '<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:dcmitype="http://purl.org/dc/dcmitype/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">'
-      + `<dc:title>${xmlEsc(S().title || 'MAP Lucky Draw')}</dc:title><dc:creator>MAP Lucky Draw</dc:creator>`
+      + `<dc:title>${xmlEsc(state.ev.name ? `${state.ev.name} ${state.ev.date}` : (S().title || 'MAP Lucky Draw'))}</dc:title><dc:creator>MAP Lucky Draw</dc:creator>`
       + `<dcterms:created xsi:type="dcterms:W3CDTF">${nowW3C}</dcterms:created><dcterms:modified xsi:type="dcterms:W3CDTF">${nowW3C}</dcterms:modified>`
       + '</cp:coreProperties>' },
     { name: 'docProps/app.xml', data: X + '<Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties" xmlns:vt="http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes"><Application>MAP Lucky Draw</Application><DocSecurity>0</DocSecurity><ScaleCrop>false</ScaleCrop><HeadingPairs><vt:vector size="2" baseType="variant"><vt:variant><vt:lpstr>Worksheets</vt:lpstr></vt:variant><vt:variant><vt:i4>1</vt:i4></vt:variant></vt:vector></HeadingPairs><TitlesOfParts><vt:vector size="1" baseType="lpstr"><vt:lpstr>Entrants</vt:lpstr></vt:vector></TitlesOfParts><AppVersion>16.0300</AppVersion></Properties>' },
@@ -3241,7 +3576,7 @@ function buildXlsx() {
 function downloadXlsx() {
   try {
     const bytes = buildXlsx();
-    download(`map-lucky-draw-${dateStamp()}.xlsx`, new Blob([bytes], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
+    download(`${exportStem()}.xlsx`, new Blob([bytes], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
   } catch (e) {
     toast('Couldn’t build the Excel file.', { type: 'error' });
   }
@@ -3266,7 +3601,7 @@ function applyTheme() {
 }
 function setSetting(key, value, { quiet = false } = {}) {
   if (S()[key] === value) return;
-  state.settings = { ...S(), [key]: value, updatedAt: stamp() };
+  state.settings = { ...S(), [key]: value, updatedAt: stamp(), ...(key === 'prize' ? { prizeAt: stamp() } : {}) };
   if (quiet) { renderAll(); persistSoon(); } else commit();
   if (SERVER_TEXT_KEYS.includes(key)) pushTextsSoon(); // the guests' phones show these (organiser on the server only)
 }
@@ -3312,6 +3647,7 @@ function renderSettings() {
     else if (inp.type === 'range') inp.value = String(key === 'volume' ? Math.round(v * 100) : v);
     else if (inp.value !== String(v)) inp.value = String(v);
   }
+  if (sEventName !== document.activeElement && sEventName.value !== state.ev.name) sEventName.value = state.ev.name;
   $('#sDurationOut').textContent = `${s.duration} s`;
   $('#sVolumeOut').textContent = `${Math.round(s.volume * 100)}%`;
   $('#sMarketing').disabled = !s.showMarketing;
@@ -3358,7 +3694,7 @@ tabs.forEach((t, i) => {
    --------------------------------------------------------------------- */
 let signupOpen = false;
 let suIdleTimer = 0;
-const SIGNUP_WINDOW = 'map-lucky-draw-signup';
+const SIGNUP_WINDOW = 'map-lucky-draw-signup' + KEY_SUFFIX; // one guest window per draw folder
 // True when this window was opened straight on #signup (a guest window or tab), not the sign-up screen shown
 // over the organiser's wheel. Only then may a guest be told to close "this window".
 let signupStandalone = false;
@@ -3381,10 +3717,12 @@ function resetSignupForm() {
   suForm.reset();
   for (const [k, inp] of Object.entries(suFields)) showFieldError(inp, $('#su' + k[0].toUpperCase() + k.slice(1) + 'Err'), '');
   showFieldError($('#suConsent'), $('#suConsentErr'), '');
+  showFieldError($('#suAdult'), $('#suAdultErr'), '');
   $('#suFormErr').hidden = true;
   $('#suSuccess').hidden = true;
   $('#suState').hidden = true;
   suForm.hidden = false;
+  stopGoingHome();
 }
 function openSignup() {
   if (signupOpen) return;
@@ -3418,6 +3756,7 @@ function closeSignup() {
   $('#btnSignup').focus({ preventScroll: true });
   if (wheelDirty && !isLocked()) rebuildWheel();
   scheduleMeasure();
+  if (!state.ev.name && !evStepOpen) showEventStep(); // this window now opens the wheel: name the event first
 }
 function clearSignupHash() {
   if (location.hash !== '#signup') return;
@@ -3497,21 +3836,23 @@ onFormSubmit(suForm, () => {
   showFieldError(suFields.email, $('#suEmailErr'), res.errors.email);
   const consent = $('#suConsent').checked;
   showFieldError($('#suConsent'), $('#suConsentErr'), consent ? '' : 'You must tick “I agree” to enter the draw.');
+  const adult = checkAdult();
   const fe = $('#suFormErr');
   fe.hidden = !dupMsg;
   fe.textContent = dupMsg;
   const bad = [['name', suFields.name], ['number', suFields.number], ['email', suFields.email]].find(([k]) => res.errors[k]);
   if (bad) { bad[1].focus(); return; }
   if (!consent) { $('#suConsent').focus(); return; }
+  if (!adult) { $('#suAdult').focus(); return; }
   if (dupMsg) { fe.scrollIntoView({ block: 'nearest' }); return; }
   if (!wheelRoom()) { fe.hidden = false; fe.textContent = 'Sorry, this draw is full and can’t take any more entries.'; fe.scrollIntoView({ block: 'nearest' }); return; }
   const marketing = S().showMarketing && $('#suMarketing').checked;
-  const entry = makeEntry({ ...res.values, weight: 1, consent: true, marketing, consentAt: new Date().toISOString() }, 'signup');
+  const entry = makeEntry({ ...res.values, weight: 1, consent: true, adult: true, marketing, consentAt: new Date().toISOString() }, 'signup');
   state.entries.push(entry);
   commit();
   showSignupSuccess(entry.name);
 });
-for (const inp of [...Object.values(suFields), $('#suConsent')]) {
+for (const inp of [...Object.values(suFields), $('#suConsent'), $('#suAdult')]) {
   inp.addEventListener('input', () => {
     if (inp.getAttribute('aria-invalid') === 'true') showFieldError(inp, $('#' + inp.id + 'Err'), '');
     // Kiosk hygiene: a half-filled form is cleared after 90 s of inactivity (not on a guest's own phone: nobody else
@@ -3520,15 +3861,35 @@ for (const inp of [...Object.values(suFields), $('#suConsent')]) {
     if (appMode !== 'guest') suIdleTimer = setTimeout(() => { if (signupOpen && !suForm.hidden) resetSignupForm(); }, 90000);
   });
 }
+/** "I confirm I am aged 18 or over." must be ticked to enter (SPEC 2.25). */
+const ADULT_MSG = 'You must be 18 or over to enter the draw.';
+function checkAdult() {
+  const ok = $('#suAdult').checked;
+  showFieldError($('#suAdult'), $('#suAdultErr'), ok ? '' : ADULT_MSG);
+  return ok;
+}
+/* The guest's own phone, or a sign-up window on the website (not over the wheel, not from file://): after the
+   confirmation, on to the client's home page (SPEC 2.25). */
+let homeTimer = 0;
+const goesHome = () => IS_HTTP && (appMode === 'guest' || signupStandalone);
+function goHomeSoon() {
+  clearTimeout(homeTimer);
+  $('#suHome').hidden = false;
+  homeTimer = setTimeout(() => { try { location.replace(HOME_URL); } catch (e) { /* stays on the confirmation */ } }, HOME_DELAY_MS);
+}
+function stopGoingHome() { clearTimeout(homeTimer); homeTimer = 0; $('#suHome').hidden = true; }
 function showSignupSuccess(name) {
   clearTimeout(suIdleTimer);
   suForm.hidden = true;
-  // The confirmation stays until the guest closes the window (no auto-reset, no way back to a blank form).
+  // The confirmation stays until the guest closes the window (no auto-reset, no way back to a blank form); in a
+  // sign-up window on the website it takes the guest to the home page after a few seconds.
   // Shown over the organiser's wheel (pop-ups blocked), closing the window would close the wheel, so it doesn't say so.
   const fn = firstName(name);
-  $('#suSuccessText').replaceChildren('Thank you, ', h('strong', { dir: 'auto', text: fn }), signupStandalone ? '. You may now close this window.' : '. You’re all done — please hand the device back.');
-  $('#suClose').hidden = !canCloseWindow();
+  const home = goesHome();
+  $('#suSuccessText').replaceChildren('Thank you, ', h('strong', { dir: 'auto', text: fn }), home ? '.' : signupStandalone ? '. You may now close this window.' : '. You’re all done — please hand the device back.');
+  $('#suClose').hidden = home || !canCloseWindow();
   $('#suSuccess').hidden = false;
+  if (home) goHomeSoon(); else stopGoingHome();
   window.scrollTo(0, 0);
   signupEl.scrollTop = 0;
   $('#suSuccessTitle').focus({ preventScroll: true });
@@ -3626,19 +3987,227 @@ $('#btnHelp').addEventListener('click', openHelp);
 $('#helpOk').addEventListener('click', closeHelp);
 $('#helpClose').addEventListener('click', closeHelp);
 
+/* ---------------------------------------------------------------------
+   Event name (SPEC 2.20): "Name your event" always comes before the wheel — on every device, offline and on the
+   website (after logging in) — and the name, with the date it was first set, names the Excel and CSV files.
+   --------------------------------------------------------------------- */
+let evStepOpen = false;
+let evStepThen = null;
+/* What this draw already holds when the step opens (SPEC 2.23, 2.24): null, or { name, since, others, joined }.
+   joined: this laptop came to continue it ("Stay", "This is my event", "Continue: …"): the name is filled in. */
+let evHold = null;
+const evStepEl = $('#evStep');
+const evNameInp = $('#evName');
+function renderEvFile() {
+  const name = cleanEventName(evNameInp.value);
+  const file = `${safeFileName(name || 'Newcastle')} ${state.ev.date || todayDMY()}.xlsx`;
+  $('#evFile').replaceChildren(...(name ? ['Excel file: ', h('strong', { dir: 'auto', text: file })] : [`Your Excel file is named after it, e.g. “${file}”.`]));
+}
+/** Shows the step; `then` runs once the wheel is opened (prefilled with this event's name, if it has one).
+    hold: this draw still holds an event this laptop didn't have (see evHold) — Continue it or Start a new event. */
+function showEventStep(then = afterWheelOpen, { hold = null } = {}) {
+  evStepThen = then;
+  evHold = hold;
+  // A held event this laptop didn't come for: nothing is filled in, so a new name can't quietly take over its people.
+  evNameInp.value = hold && !hold.joined ? '' : state.ev.name || (appMode === 'organiser' ? serverEventHint : '');
+  // Moved here from a draw that still held someone else's event, with this event's name already typed: keep it.
+  if (!hold && !evNameInp.value && switchedFrom && switchedFrom.name) { evNameInp.value = switchedFrom.name; switchedFrom.name = ''; }
+  renderEvHold();
+  renderRunning();
+  showFieldError(evNameInp, $('#evNameErr'), '');
+  $('#evBrandSub').textContent = appMode === 'organiser' && PAGE_SLOT ? PAGE_SLOT.label : 'Before the wheel opens';
+  renderEvFile();
+  evStepOpen = true;
+  renderOthers();
+  evStepEl.hidden = false;
+  evStepEl.scrollTop = 0;
+  $('#app').inert = true;
+  $('#app').setAttribute('aria-hidden', 'true');
+  document.title = 'Name your event · MAP Lucky Draw';
+  setTimeout(() => {
+    if (!evStepOpen) return;
+    if (evHold && !evHold.joined) $('#evContinue').focus();
+    else { evNameInp.focus(); evNameInp.select(); }
+  }, 0);
+}
+/** "This draw still holds “Bristol Open Day” (from 14:05)." */
+function renderEvHold() {
+  const box = $('#evHold');
+  box.hidden = !evHold;
+  if (!evHold) return;
+  const since = evHold.since ? ` (from ${sinceText(evHold.since)})` : '';
+  $('#evHoldText').textContent = evHold.name ? `This draw still holds “${evHold.name}”${since}.` : `This draw still holds sign-ups from an earlier event${since}.`;
+  const note = $('#evHoldNote');
+  // Its laptop was here a few minutes ago (its Wi-Fi may have dropped): that event may well still be running.
+  const mins = evHold.ago != null ? Math.max(1, Math.round(evHold.ago / 60)) : 0;
+  note.hidden = !evHold.others && !mins;
+  note.textContent = evHold.others ? 'Another laptop is using it right now: continue it to work on the same event together.'
+    : mins ? `Its laptop was last connected ${plural(mins, 'minute')} ago. If that event is still running, use another draw.` : '';
+  $('#evOtherDraw').hidden = !(PAGE_SLOT && appMode === 'organiser' && !evHold.joined && (evHold.others || mins));
+}
+/** 14:05 today, otherwise 10-10-2026 14:05. */
+function sinceText(ms) {
+  const d = new Date(ms);
+  const t = `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+  return todayDMY(d) === todayDMY() ? t : `${todayDMY(d)} ${t}`;
+}
+/** Continue the event this draw holds: everything stays (people, winners, round, prize, name). */
+function continueHeldEvent() {
+  if (!evStepOpen || !evHold) return;
+  if (!state.ev.name) { // only sign-ups so far: it still needs a name
+    evHold = null;
+    renderEvHold();
+    evNameInp.value = '';
+    renderEvFile();
+    evNameInp.focus();
+    return;
+  }
+  openWheelFromStep(state.ev.name);
+}
+function openWheelFromStep(name) {
+  setEventName(name);
+  evHold = null;
+  hideEventStep();
+  renderAll();
+  scheduleMeasure();
+  const then = evStepThen;
+  evStepThen = null;
+  if (then) then();
+}
+$('#evContinue').addEventListener('click', continueHeldEvent);
+/* "Use another draw": the event held here may still be running (its laptop only just dropped out): go to the first
+   free draw instead, preferring one that holds nothing. */
+/** Leaves this draw (it still holds someone else's event) for a free one; `name` is carried over to its "Name your
+    event" step. False when no other draw is free. */
+async function useOtherDraw(name = '') {
+  if (!evStepOpen || !PAGE_SLOT) return false;
+  const slots = (await fetchSlots({ timeout: 5000 })).filter(x => x.present && !x.live && x.name !== PAGE_SLOT.name);
+  const target = slots.find(x => !x.cfg.hasEvent) || slots[0];
+  if (!target) return false;
+  await leaveDraw();
+  try { sessionStorage.setItem(SWITCH_KEY, JSON.stringify({ from: PAGE_SLOT.name, to: target.name, at: Date.now(), hops: 1, name })); } catch (e) { /* optional */ }
+  location.replace(target.url + '#wheel');
+  return true;
+}
+$('#evOtherDraw').addEventListener('click', async ev => {
+  const b = ev.currentTarget;
+  if (!evStepOpen || !PAGE_SLOT || b.disabled) return;
+  b.disabled = true;
+  if (!(await useOtherDraw(cleanEventName(evNameInp.value)))) { b.disabled = false; toast('No other draw is free right now.', { type: 'error' }); }
+});
+$('#evStartNew').addEventListener('click', () => {
+  if (!evStepOpen) return;
+  const typed = cleanEventName(evNameInp.value);
+  newEvent({ fromStep: true, name: evHold && evHold.name && sameEventName(typed, evHold.name) ? '' : typed });
+});
+const sameEventName = (a, b) => cleanEventName(a).toLocaleLowerCase('en-GB') === cleanEventName(b).toLocaleLowerCase('en-GB');
+function hideEventStep() {
+  if (!evStepOpen) return;
+  evStepOpen = false;
+  evStepEl.hidden = true;
+  if (!signupOpen) { $('#app').inert = false; $('#app').removeAttribute('aria-hidden'); }
+  document.title = 'MAP Lucky Draw';
+}
+onFormSubmit($('#evForm'), () => {
+  if (!evStepOpen || newEventBusy) return;
+  const name = cleanEventName(evNameInp.value);
+  if (!name) { showFieldError(evNameInp, $('#evNameErr'), 'Please enter your event’s name, e.g. Newcastle.'); evNameInp.focus(); return; }
+  if (evHold) {
+    // The held event's own name: continue it. Any other name is a new event, which deletes the held one first —
+    // unless that event was in use recently (its laptop may only have lost Wi-Fi): then this event goes to a free
+    // draw instead, so typing a name can never lead to wiping someone else's running event.
+    if (evHold.name && sameEventName(name, evHold.name)) { openWheelFromStep(state.ev.name || name); return; }
+    if (!evHold.name && evHold.joined) { openWheelFromStep(name); return; }
+    const recent = !evHold.joined && (evHold.others || (evHold.ago != null && evHold.ago < 2 * 3600));
+    if (recent && PAGE_SLOT && appMode === 'organiser') {
+      const btn = $('#evSubmit');
+      btn.disabled = true;
+      useOtherDraw(name).then(moved => { if (!moved) { btn.disabled = false; newEvent({ fromStep: true, name }); } });
+      return;
+    }
+    newEvent({ fromStep: true, name });
+    return;
+  }
+  openWheelFromStep(name);
+});
+evNameInp.addEventListener('input', () => {
+  if (evNameInp.getAttribute('aria-invalid') === 'true') showFieldError(evNameInp, $('#evNameErr'), '');
+  renderEvFile();
+});
+/** This event's name; its date is the day it was first named. Organiser: also on the server (guests' list, backup). */
+function setEventName(name) {
+  if (state.ev.name !== name || !state.ev.date) {
+    state.ev = { name, date: state.ev.date || todayDMY(), at: state.ev.at || stamp(), updatedAt: stamp() };
+    commit();
+  }
+  if (appMode === 'organiser' && sync.authed && (!sync.cfg || sync.cfg.eventName !== name)) pushConfig();
+}
+/** Once the wheel shows: an unfinished winner card reopens, else the first-visit guide; after an automatic switch
+    of draw, a reminder of which draw this is. */
+function afterWheelOpen() {
+  if (switchedFrom && !switchedFrom.told) { switchedFrom.told = true; toast(switchedMsg(), { timeout: 10000 }); }
+  if (winnerOpen || restorePendingWinner()) return;
+  if (!lsGet(GUIDE_KEY)) setTimeout(() => { if (!signupOpen && !evStepOpen && !anyModalOpen()) openHelp(); }, 250);
+}
+/* Settings → Event name (required: an empty box keeps the current name). */
+const sEventName = $('#sEventName');
+sEventName.addEventListener('input', () => {
+  const name = cleanEventName(sEventName.value);
+  showFieldError(sEventName, $('#sEventNameErr'), name ? '' : 'Your event needs a name: it names the Excel file.');
+  if (!name || name === state.ev.name) return;
+  state.ev = { name, date: state.ev.date || todayDMY(), at: state.ev.at || stamp(), updatedAt: stamp() };
+  renderAll();
+  persistSoon();
+  pushTextsSoon();
+});
+sEventName.addEventListener('change', () => {
+  if (!cleanEventName(sEventName.value)) { sEventName.value = state.ev.name; showFieldError(sEventName, $('#sEventNameErr'), ''); }
+  persist();
+  broadcast();
+});
+/* Header chip: the draw's badge (Draw 1 … Draw 10, on the website) and the event's name. Click: change the name. */
+function renderEventChip() {
+  const badge = appMode === 'organiser' && PAGE_SLOT ? PAGE_SLOT.label : '';
+  const { name, date } = state.ev;
+  for (const chip of $$('.ev-chip')) {
+    chip.hidden = !badge && !name;
+    chip.classList.toggle('has-badge', !!badge);
+    const b = chip.querySelector('.draw-badge');
+    b.hidden = !badge;
+    b.textContent = badge;
+    chip.querySelector('.ev-chip-text').hidden = !name;
+    chip.querySelector('.ev-chip-name').textContent = name;
+    chip.querySelector('.ev-chip-date').textContent = name ? date : '';
+    chip.title = name ? `Event: ${name}, ${date}. Click to change its name.` : 'Click to name your event.';
+    chip.setAttribute('aria-label', `${badge ? badge + '. ' : ''}${name ? `Event: ${name}, ${date}` : 'Event not named yet'}. Change the event name`);
+  }
+}
+for (const chip of $$('.ev-chip')) {
+  chip.addEventListener('click', () => {
+    selectTab($('#tab-settings'), false);
+    sEventName.scrollIntoView({ block: 'center', behavior: reduceMQ.matches ? 'auto' : 'smooth' });
+    sEventName.focus({ preventScroll: true });
+  });
+}
+
 
 /** "New event": deletes everyone who entered, the winners and the round count — on the server too (phone
     sign-ups and its Excel backup) — so nothing from the last event can show up again. Settings and the
     organiser's login are kept. All or nothing: if the server can't be cleared, nothing is deleted here. */
 let newEventBusy = false;
-async function newEvent() {
+/** fromStep: started on "Name your event" (Start a new event, or a new name typed over an event this draw still
+    holds); name: the new event's name, if one was typed (the wheel then opens straight away). */
+async function newEvent({ fromStep = false, name = '' } = {}) {
   if (newEventBusy || isLocked()) return;
   const server = appMode === 'organiser' && sync.authed;
+  const held = fromStep && evHold ? evHold : null;
   const v = await askConfirm({
     title: 'Start a new event?',
-    text: 'This permanently deletes everyone who entered, all winners and the round count'
+    text: (held ? (held.name ? `This draw still holds “${held.name}”. ` : 'This draw still holds sign-ups from an earlier event. ') : '')
+      + 'This permanently deletes everyone who entered, all winners and the round count'
       + (server ? ' on this laptop, plus every phone sign-up and the Excel backup on your server' : '')
       + '. The old Excel file can’t be downloaded again afterwards. Your settings' + (server ? ' and password stay the same, and sign-ups are opened for the new event.' : ' stay the same.')
+      + (server && PAGE_SLOT ? ` Any other laptop on ${PAGE_SLOT.label} starts the new event too.` : '')
       + ' Type NEW EVENT to confirm.',
     ok: 'Start new event', danger: true,
     extra: { label: 'Download Excel first', onClick: () => { downloadXlsx(); return 'Downloaded — check your Downloads folder.'; } },
@@ -3648,9 +4217,12 @@ async function newEvent() {
   if (v == null || isLocked()) return;
   newEventBusy = true;
   try {
+    let srvEpoch = '';
+    let srvVersion = null;
     if (server) {
       stopSync();
       for (let i = 0; sync.busy && i < 150; i++) await sleep(100); // let an in-flight poll finish first
+      await evIdle();                                               // and a backup still being sent
       const r = await api('clear', { method: 'POST', body: { confirm: 'DELETE' }, admin: true });
       if (r.status === 401) { requireLogin(); return; }
       if (!r.ok) {
@@ -3658,21 +4230,36 @@ async function newEvent() {
         toast('Couldn’t reach the server — nothing was deleted. Try again.', { type: 'error' });
         return;
       }
+      srvEpoch = typeof r.data.epoch === 'string' ? r.data.epoch : '';
+      srvVersion = Number.isInteger(r.data.version) ? r.data.version : null;
+      evSync.eventId = typeof r.data.eventId === 'string' ? r.data.eventId : ''; // the new event's id on the server
     }
+    dismissWinnerCard();
+    evRedraw = null;
     const fresh = freshState();
-    fresh.settings = { ...S(), prize: '', updatedAt: stamp() };
-    fresh.epoch = { id: uid(), at: Date.now() };   // other windows still holding the old event can't merge it back
+    fresh.settings = { ...S(), prize: '', prizeAt: stamp(), updatedAt: stamp() };
+    // A new epoch, so other windows still holding the old event can't merge it back. On a draw it is named after
+    // the server's new epoch: every laptop on this draw that follows this New event lands on the same one.
+    fresh.epoch = { id: srvEpoch ? 's:' + srvEpoch : uid(), at: Math.max(Date.now(), state.epoch.at + 1) };
+    if (srvEpoch) fresh.srv = evBind(srvEpoch);
     state = fresh;
     editingId = null;
-    sync.epoch = null; sync.since = 0; sync.total = 0; sync.winnersSig = '';
+    sync.epoch = srvEpoch || null; sync.since = 0; sync.total = 0;
     saveCursor();
     try { localStorage.removeItem(ENTERED_KEY); } catch (e) { /* ignore */ }
+    serverEventHint = '';
+    if (server) evStartedFresh(srvEpoch, srvVersion);
     commit();
     if (server) {
       startSync();
       await pushConfig({ open: true }); // shows its own message if it fails
     }
     toast('New event started — everything from the last event has been deleted.');
+    if (fromStep) {
+      // Back on "Name your event" (still before the wheel): with a name typed, straight on to the wheel.
+      if (name) openWheelFromStep(name);
+      else showEventStep(evStepThen);
+    } else if (!state.ev.name) showEventStep(null); // the new event's name (it names the new Excel file)
   } finally {
     newEventBusy = false;
   }
@@ -3689,8 +4276,8 @@ document.addEventListener('click', async ev => {
   if (lockedActs.includes(act) && isLocked()) return toast('Finish the current draw first.');
   switch (act) {
     case 'xlsx': downloadXlsx(); break;
-    case 'csv-winners': download(`map-lucky-draw-winners-${dateStamp()}.csv`, winnersCSV(), 'text/csv;charset=utf-8'); break;
-    case 'csv-entrants': download(`map-lucky-draw-entrants-${dateStamp()}.csv`, entrantsCSV(), 'text/csv;charset=utf-8'); break;
+    case 'csv-winners': download(`${exportStem()} winners.csv`, winnersCSV(), 'text/csv;charset=utf-8'); break;
+    case 'csv-entrants': download(`${exportStem()} entrants.csv`, entrantsCSV(), 'text/csv;charset=utf-8'); break;
     case 'shuffle': {
       const act = activeEntries();
       if (act.length < 2) return;
@@ -3738,15 +4325,20 @@ document.addEventListener('click', async ev => {
     }
     case 'new-event': newEvent(); break;
     case 'delete-all': {
-      const ok = await askConfirm({ title: 'Delete ALL data?', text: 'Every entry, the winner log and all settings will be permanently deleted from this browser. This cannot be undone.', ok: 'Delete everything', danger: true });
+      const onDraw = appMode === 'organiser' && sync.authed;
+      const ok = await askConfirm({ title: 'Delete ALL data?', text: 'Every entry, the winner log and all settings will be permanently deleted from this browser. This cannot be undone.'
+        + (onDraw ? ' The event your web server keeps for this draw is not deleted: this laptop is offered it again. To delete it everywhere, use New event.' : ''), ok: 'Delete everything', danger: true });
       if (!ok) return;
+      if (onDraw) evDetach(); // nothing is sent to the server until this laptop has read the draw's event again
       const fresh = freshState();
-      fresh.epoch = { id: uid(), at: Date.now() };
+      fresh.epoch = { id: uid(), at: Math.max(Date.now(), state.epoch.at + 1) };
       state = fresh;
       editingId = null;
       commit();
       applyTheme();
       toast('All data deleted.');
+      if (onDraw) { const hold = await evRestore(); showEventStep(null, { hold }); }
+      else showEventStep(null);
       break;
     }
     case 'open-signup-window': openGuestSignup(); break;
@@ -3759,6 +4351,7 @@ document.addEventListener('click', async ev => {
    --------------------------------------------------------------------- */
 let lastListSig = '';
 let lastLogSig = '';
+let elsewhereTimer = 0;
 function renderAll() {
   applyTheme();
   const s = S();
@@ -3776,29 +4369,36 @@ function renderAll() {
   pc.replaceChildren(h('span', { class: 'n', text: String(active.length) }), ' on the wheel · ', h('span', { class: 'n', text: String(winners) }), winners === 1 ? ' winner' : ' winners');
   $('#countEntries').textContent = String(active.length);
   $('#countWinners').textContent = String(winners);
+  // Another laptop of this draw is drawing a winner right now (R1-2): no draw here until it has landed.
+  const elsewhere = !locked && othersDrawing();
+  clearTimeout(elsewhereTimer);
+  if (elsewhere) elsewhereTimer = setTimeout(renderAll, 1000); // its claim lapses by itself if that laptop went away
   // Stage status line (audience-facing): the round and its prize only, no entrant or ticket counts.
-  const empty = wheelEntries.length === 0 && !locked;
+  const empty = wheelEntries.length === 0 && !locked && !elsewhere;
   const prize = s.prize.trim();
   const queued = locked && active.some(e => !wheelEntries.some(w => w.id === e.id));
   const info = $('#wheelStatus');
   info.replaceChildren();
-  // In event mode the prize display below already reads "Round N prize", so the line then only carries notes.
-  const parts = empty ? ['The wheel is empty'] : (eventMode && prize) ? [] : [`Round ${nextRound}`, eventMode ? '' : prize];
+  // Event mode shows no round number at all (SPEC 2.25): no "Round N" under the SPIN button, and the prize
+  // display reads just "Prize"; the line only carries notes there.
+  const parts = elsewhere ? ['A winner is being drawn on another laptop'] : empty ? ['The wheel is empty'] : eventMode ? [] : [`Round ${nextRound}`, prize];
   // Each part stays on one line (the prize may wrap), so a narrow column wraps at the separators.
   parts.filter(Boolean).forEach((t, i) => { if (i) info.append(' · '); info.append(h('span', { class: i ? 'si si-prize' : 'si', text: t })); });
   if (queued) info.append(info.childNodes.length ? ' · ' : '', h('span', { class: 'si queued', text: 'New entries join after this draw' }));
   const pd = $('#prizeDisplay');
   pd.replaceChildren();
-  if (prize) pd.append(h('span', { class: 'eyebrow', text: `Round ${nextRound} prize` }), h('strong', { text: prize }));
+  if (prize) pd.append(h('span', { class: 'eyebrow', text: eventMode ? 'Prize' : `Round ${nextRound} prize` }), h('strong', { text: prize }));
   wheelEl.classList.toggle('is-empty', empty);
   wheelEl.classList.toggle('is-locked', locked);
   $('#wheelEmpty').hidden = !empty;
-  $('#spinBtn').disabled = locked || wheelEntries.length === 0;
-  $('#spinBtn').setAttribute('aria-label', spinning ? 'Spinning…' : 'SPIN');
-  wheelEl.setAttribute('aria-disabled', String(locked || empty));
+  $('#spinBtn').disabled = locked || wheelEntries.length === 0 || elsewhere;
+  $('#spinBtn').setAttribute('aria-label', spinning ? 'Spinning…' : elsewhere ? 'SPIN (a winner is being drawn on another laptop)' : 'SPIN');
+  wheelEl.setAttribute('aria-disabled', String(locked || empty || elsewhere));
   for (const b of $$('[data-lock]')) b.disabled = locked;
   for (const b of $$('.entry-edit button[type="submit"]')) b.disabled = locked; // saved after the draw (the wheel is frozen)
   renderSettings();
+  renderEventChip();
+  renderOthers();
   const listSig = JSON.stringify([state.entries, state.log.map(r => r.entryId + r.type), s.privacy, locked]);
   if (listSig !== lastListSig || listDirty) { lastListSig = listSig; renderEntries(); }
   const logSig = JSON.stringify([state.log, s.privacy]);
@@ -3816,17 +4416,34 @@ const API_URL = IS_HTTP ? new URL('api.php', location.href).href : ''; // next t
 const POLL_MS = 2000;          // organiser: look for new sign-ups every 2 s…
 const POLL_MAX_MS = 30000;     // …backing off to 30 s while the server can't be reached
 const PAGE_MAX = 1000;         // api.php returns at most this many sign-ups per request
-const SYNC_KEY = 'map-lucky-draw:phone-sync:v1';  // how far this browser has read the server's sign-ups
-const ENTERED_KEY = 'map-lucky-draw:entered:v1';  // a guest's phone remembers that it has entered
+const SYNC_KEY = 'map-lucky-draw:phone-sync:v1' + KEY_SUFFIX;  // how far this browser has read the server's sign-ups
+/* A guest's phone remembers that it has entered — per draw folder that received the entry (and that draw's event). */
+const ENTERED_BASE = 'map-lucky-draw:entered:v1';
+const enteredKey = dir => ENTERED_BASE + (IS_HTTP ? ':' + dir : '');
+const ENTERED_KEY = enteredKey(FOLDER_PATH);
 const ENTERED_TTL = 12 * 3600e3;
-const ORGANISER_KEY = 'map-lucky-draw:organiser-session:v1'; // '1' once logged in here: only then ask api.php first
+const ORGANISER_KEY = 'map-lucky-draw:organiser-session:v1' + KEY_SUFFIX; // '1' once logged in here: only then ask api.php first
+const SWITCH_KEY = 'map-lucky-draw:switched'; // sessionStorage (shared by the draw folders): "moved here from Draw 1"
+/** Before each draw folder had its own storage names, a page on a website used the plain names. The first draw
+    folder (or a page outside the draw folders) takes them over once, so updating the files mid-event keeps the wheel. */
+function migrateLegacyKeys() {
+  if (!IS_HTTP || (PAGE_SLOT && PAGE_SLOT.index !== 0)) return;
+  try {
+    for (const base of ['map-lucky-draw:v1', 'map-lucky-draw:guide-seen:v1', 'map-lucky-draw:phone-sync:v1', ENTERED_BASE, 'map-lucky-draw:organiser-session:v1']) {
+      const old = localStorage.getItem(base);
+      if (old == null) continue;
+      if (localStorage.getItem(base + KEY_SUFFIX) == null) localStorage.setItem(base + KEY_SUFFIX, old);
+      localStorage.removeItem(base);
+    }
+  } catch (e) { /* storage blocked: nothing to take over */ }
+}
 /** Settings the organiser's laptop copies to api.php, because the guests' phones show them. */
 const SERVER_TEXT_KEYS = ['title', 'subtitle', 'consentText', 'marketingText', 'showMarketing'];
 const sleep = ms => new Promise(res => setTimeout(res, ms));
 
 /** One same-origin request to api.php. Never throws: resolves to { status, ok, data, code, network, notApi }. */
-async function api(action, { method = 'GET', body, query = null, admin = false, timeout = 10000 } = {}) {
-  const url = new URL(API_URL);
+async function api(action, { method = 'GET', body, query = null, admin = false, timeout = 10000, url: base = API_URL } = {}) {
+  const url = new URL(base); // this folder's api.php, or another draw folder's (same website)
   url.searchParams.set('action', action);
   if (query) for (const [k, v] of Object.entries(query)) url.searchParams.set(k, String(v));
   const headers = { Accept: 'application/json' };
@@ -3873,8 +4490,32 @@ function cleanPublicConfig(d) {
     consentText: text(src.consentText, 400, DEFAULT_CONSENT),
     marketingText: text(src.marketingText, 200, DEFAULT_MARKETING),
     showMarketing: src.showMarketing !== false,
-    event: typeof src.event === 'string' ? str(src.event, 64) : ''
+    event: typeof src.event === 'string' ? str(src.event, 64) : '',
+    eventName: typeof src.eventName === 'string' ? cleanEventName(src.eventName) : '',
+    organiserActive: src.organiserActive === true, // a laptop is running this draw right now
+    hasEvent: src.hasEvent === true,               // it holds an event (SPEC 2.24)…
+    lastActiveAgo: Number.isFinite(src.lastActiveAgo) && src.lastActiveAgo >= 0 ? src.lastActiveAgo : null, // …last used this long ago (s)
+    drawFolders: Array.isArray(src.drawFolders) ? src.drawFolders.filter(n => DRAW_SLOTS.includes(n)) : null
   };
+}
+/* The draw folders api.php says are uploaded next to this one: only those are asked (null: unknown, ask all ten). */
+let uploadedSlots = null;
+function noteUploaded(c) { if (PAGE_SLOT && c && c.drawFolders && c.drawFolders.includes(PAGE_SLOT.name)) uploadedSlots = c.drawFolders; }
+/** Every draw folder's public config, fetched in parallel (one request each, short timeout). A folder that isn't
+    uploaded (or has no working api.php) comes back with present:false and is skipped. `known`: answers in hand. */
+async function fetchSlots({ timeout = 5000, known = null } = {}) {
+  if (!PAGE_SLOT) return [];
+  const own = known && known[PAGE_SLOT.name];
+  if (own && own.ok) noteUploaded(cleanPublicConfig(own.data));
+  return Promise.all(DRAW_SLOTS.map(async name => {
+    const s = slotInfo(name);
+    const skip = uploadedSlots && !uploadedSlots.includes(name); // not uploaded: nothing to ask
+    const r = known && known[name] ? known[name] : skip ? null : await api('config', { url: s.apiUrl, timeout });
+    s.present = !!(r && r.ok);
+    s.cfg = s.present ? cleanPublicConfig(r.data) : null;
+    s.live = s.present && s.cfg.organiserActive;
+    return s;
+  }));
 }
 function focusTop(sel) {
   window.scrollTo(0, 0);
@@ -3888,6 +4529,12 @@ let guestCfg = cleanPublicConfig(null);
 let guestClient = null;    // { id, sig }: sending the same details again reuses the clientId, so nobody is filed twice
 let guestSending = false;
 let guestRecheck = 0;
+/* One QR code for every draw (SPEC 2.19, 2.21, 2.22): the form sends to the draw whose event is running (guestTarget,
+   a slotInfo; null = this folder). With several running, the guest picks theirs by its event name first. */
+let guestTarget = null;
+let guestLive = [];        // the events running when the guest was last routed (the list "Choose again" shows)
+let guestPicked = false;   // the guest chose from that list (so "Not your event? Choose again" is offered)
+let guestChecking = false;
 const GUEST_MSG = {
   duplicate: 'This phone number or email has already been entered.',
   rate: 'Too many attempts — please wait a minute and try again.',
@@ -3900,19 +4547,20 @@ const GUEST_FIELD_MSG = {
   number: 'Enter a valid phone number (7–15 digits; +, spaces, dashes and brackets are fine).',
   email: 'Enter a valid email address, like name@example.com.'
 };
-const guestDir = () => location.pathname.replace(/[^/]*$/, ''); // "/draw/" for both /draw/ and /draw/index.html
+const guestDir = () => (guestTarget ? guestTarget.dir : FOLDER_PATH); // the folder of the draw the form sends to
+const guestApiUrl = () => (guestTarget ? guestTarget.apiUrl : API_URL);
+/** "You're already entered" — remembered per draw and per event (New event on that draw forgets it). */
 function rememberedEntry() {
   try {
-    const r = JSON.parse(lsGet(ENTERED_KEY) || 'null');
+    const r = JSON.parse(lsGet(enteredKey(guestDir())) || 'null');
     const ev = guestCfg && guestCfg.event;
     if (ev && r && r.event !== ev) return null; // entered at an earlier event: this is a new one
     if (r && r.dir === guestDir() && Date.now() - r.at < ENTERED_TTL) return { name: str(r.name, 80) };
   } catch (e) { /* ignore */ }
   return null;
 }
-function startGuest(probe) {
+async function startGuest(probe) {
   appMode = 'guest';
-  document.documentElement.setAttribute('data-app', 'guest');
   signupOpen = true;       // no operator toasts or wheel shortcuts: there is no operator view behind this screen
   signupStandalone = true;
   guestCfg = cleanPublicConfig(probe && probe.data);
@@ -3922,16 +4570,117 @@ function startGuest(probe) {
   suFields.email.setAttribute('autocomplete', 'email');
   $('#suFine').textContent = 'Your details go only to the organiser of this draw and are used only as described above.';
   document.title = 'Enter the draw · MAP Lucky Draw';
-  renderGuest();
+  // In a draw folder: which events are running right now? (All draws at once, while the brand splash shows.)
+  const slots = PAGE_SLOT ? await fetchSlots({ timeout: 5000, known: { [PAGE_SLOT.name]: probe } }) : [];
+  document.documentElement.setAttribute('data-app', 'guest');
   signupEl.hidden = false;
+  routeGuest(slots);
+}
+/**
+ * 0 events running: this folder's own form (or its closed / full message). 1: straight to that event's form, even
+ * if it is another draw (no visible switch). 2 or more: "Which event are you at?". keep: a re-check that leaves a
+ * guest on the event they chose while it is still running.
+ */
+function routeGuest(slots, { keep = false } = {}) {
+  const live = slots.filter(x => x.live);
+  if (live.length >= 2) {
+    guestLive = live;
+    const still = keep && guestPicked && guestTarget && live.find(x => x.name === guestTarget.name);
+    if (still) { setGuestTarget(still); showGuestEntry(); return; }
+    showGuestPicker();
+    return;
+  }
+  guestLive = [];
+  guestPicked = false;
+  const own = PAGE_SLOT ? slots.find(x => x.name === PAGE_SLOT.name && x.present) : null;
+  if (live.length === 1) setGuestTarget(live[0]);
+  else if (own) setGuestTarget(own);
+  else renderGuest(); // a folder outside the draw folders: as before
+  showGuestEntry();
+}
+function setGuestTarget(slot) {
+  if (!guestTarget || guestTarget.name !== slot.name) { guestClient = null; guestFormError(''); }
+  guestTarget = slot;
+  guestCfg = slot.cfg;
+  renderGuest();
+  $('#suAgainEv').textContent = guestEventLabel(slot); // the event chosen from the list
+}
+/** An event as guests see it: its event name (its title if it has none), plus " — Draw N" when two share a name. */
+function guestEventLabel(slot) {
+  const key = x => (x.cfg.eventName || x.cfg.title).trim().toLocaleLowerCase('en-GB');
+  const name = slot.cfg.eventName || slot.cfg.title;
+  return guestLive.filter(x => key(x) === key(slot)).length > 1 ? `${name} — ${slot.label}` : name;
+}
+/** The chosen draw: "already entered", its form, or its closed / full message. */
+function showGuestEntry() {
+  $('#suPick').hidden = true;
+  $('#suEvent').hidden = true;
+  $('#suAgainRow').hidden = !guestPicked;
   const done = rememberedEntry();
   if (done) showGuestDone(done.name, true);
   else showGuestForm();
 }
+/** One button per running event, named by its event name (its title if it has none); same names get " — Draw N". */
+function showGuestPicker() {
+  clearTimeout(guestRecheck);
+  stopGoingHome();
+  guestPicked = false;
+  const live = guestLive;
+  const same = key => live.every(x => x.cfg[key] === live[0].cfg[key]);
+  renderGuestBrand(same('title') ? live[0].cfg.title : DEFAULTS.title, same('subtitle') ? live[0].cfg.subtitle : '');
+  $('#suPickList').replaceChildren(...live.map(x => {
+    const name = guestEventLabel(x);
+    const sub = x.cfg.subtitle && x.cfg.subtitle !== DEFAULTS.subtitle ? x.cfg.subtitle : '';
+    return h('li', null, h('button', { type: 'button', class: 'su-pick-btn', dataset: { slot: x.name }, onclick: () => pickGuestEvent(x) },
+      h('span', { class: 'su-pick-text' }, h('span', { class: 'su-pick-name', dir: 'auto', text: name }), sub ? h('span', { class: 'su-pick-sub', dir: 'auto', text: sub }) : null),
+      icon('chevron', 'ic')));
+  }));
+  suForm.hidden = true;
+  $('#suSuccess').hidden = true;
+  $('#suState').hidden = true;
+  $('#suAgainRow').hidden = true;
+  $('#suEvent').hidden = true;
+  $('#suPick').hidden = false;
+  focusTop('#suPickHeading');
+}
+/** A tap on an event: its latest config first (it may have closed or filled up since the list was shown). */
+async function pickGuestEvent(slot) {
+  const btns = $$('#suPickList .su-pick-btn');
+  if (btns.some(x => x.disabled)) return;
+  for (const x of btns) x.disabled = true;
+  const r = await api('config', { url: slot.apiUrl, timeout: 4000 });
+  for (const x of btns) x.disabled = false;
+  if ($('#suPick').hidden) return; // re-routed meanwhile
+  if (r.ok) slot.cfg = cleanPublicConfig(r.data);
+  setGuestTarget(slot);
+  guestPicked = true;
+  showGuestEntry();
+}
+$('#suAgain').addEventListener('click', () => { if (guestLive.length >= 2 && !guestSending) showGuestPicker(); });
+/** Back on the page (e.g. after checking a message): look again at which events are running — only while the list
+    or an untouched form is showing, so nothing a guest typed is ever lost. */
+function guestIdle() {
+  if (!$('#suPick').hidden) return true;
+  return !suForm.hidden && !guestSending && !$('#suConsent').checked && !$('#suAdult').checked && !Object.values(suFields).some(i => i.value.trim());
+}
+document.addEventListener('visibilitychange', async () => {
+  if (appMode !== 'guest' || !PAGE_SLOT || document.visibilityState !== 'visible' || guestChecking || !guestIdle()) return;
+  guestChecking = true;
+  try {
+    const slots = await fetchSlots({ timeout: 5000 });
+    if (guestIdle() && slots.some(x => x.present)) routeGuest(slots, { keep: true });
+  } finally {
+    guestChecking = false;
+  }
+});
+function renderGuestBrand(title, subtitle) {
+  for (const el of $$('#signup [data-bind="title"]')) el.textContent = title;
+  for (const el of $$('#signup [data-bind="subtitle"]')) el.textContent = subtitle;
+  $('#signup .su-sub').hidden = !subtitle;
+}
 function renderGuest() {
   const c = guestCfg;
-  for (const el of $$('#signup [data-bind="title"]')) el.textContent = c.title;
-  for (const el of $$('#signup [data-bind="subtitle"]')) el.textContent = c.subtitle;
+  renderGuestBrand(c.title, c.subtitle);
   $('#suConsentText').textContent = c.consentText;
   $('#suMarketingText').textContent = c.marketingText;
   $('#suMarketingRow').hidden = !c.showMarketing;
@@ -3940,15 +4689,22 @@ function renderGuest() {
 /** The form, unless api.php says entries are closed or the draw is full. */
 function showGuestForm() {
   clearTimeout(guestRecheck);
+  stopGoingHome();
   if (!guestCfg.open || guestCfg.full) { showGuestState(guestCfg.open ? 'full' : 'closed'); return; }
+  $('#suPick').hidden = true;
   $('#suState').hidden = true;
   $('#suSuccess').hidden = true;
+  // The event's name above the form whenever it is known (a guest who chose from the list sees it with "Choose again").
+  $('#suEventName').textContent = guestCfg.eventName;
+  $('#suEvent').hidden = guestPicked || !guestCfg.eventName;
   suForm.hidden = false;
   focusTop('#suHeading');
 }
 /** "Entries are now closed." / "Sorry, this draw is full." — re-checked every 20 s, so the form comes back by itself. */
 function showGuestState(kind) {
   suForm.hidden = true;
+  $('#suEvent').hidden = true;
+  $('#suPick').hidden = true;
   $('#suSuccess').hidden = true;
   $('#suStateTitle').textContent = kind === 'full' ? 'Sorry, this draw is full.' : 'Entries are now closed.';
   $('#suStateText').textContent = 'Thank you for your interest.';
@@ -3956,24 +4712,30 @@ function showGuestState(kind) {
   focusTop('#suStateTitle');
   clearTimeout(guestRecheck);
   guestRecheck = setTimeout(async function recheck() {
-    const r = await api('config', { timeout: 8000 });
-    if (r.ok) { guestCfg = cleanPublicConfig(r.data); renderGuest(); }
+    const target = guestTarget;
+    const r = await api('config', { timeout: 8000, url: guestApiUrl() });
+    if (target !== guestTarget) return; // the guest chose another event meanwhile
+    if (r.ok) { guestCfg = cleanPublicConfig(r.data); if (guestTarget) guestTarget.cfg = guestCfg; renderGuest(); }
     if ($('#suState').hidden) return;
     if (guestCfg.open && !guestCfg.full) showGuestForm();
     else guestRecheck = setTimeout(recheck, 20000);
   }, 20000);
 }
-/** The confirmation (no counts, no way back to a blank form, no Close button: the guest just closes the page). */
+/** The confirmation (no counts, no way back to a blank form, no Close button): after 3 s, on to the home page. */
 function showGuestDone(name, already) {
   clearTimeout(guestRecheck);
   suForm.hidden = true;
+  $('#suEvent').hidden = true;
+  $('#suPick').hidden = true;
   $('#suState').hidden = true;
+  $('#suAgainRow').hidden = !(already && guestPicked); // never after sending an entry
   $('#suSuccessTitle').textContent = already ? 'You’re already entered into the raffle.' : 'You’re entered into the raffle!';
   const fn = name ? firstName(name) : '';
-  $('#suSuccessText').replaceChildren(...(fn ? ['Thank you, ', h('strong', { dir: 'auto', text: fn }), '. You may now close this window.'] : ['Thank you. You may now close this window.']));
+  $('#suSuccessText').replaceChildren(...(fn ? ['Thank you, ', h('strong', { dir: 'auto', text: fn }), '.'] : ['Thank you.']));
   $('#suClose').hidden = true;
   $('#suSuccess').hidden = false;
   focusTop('#suSuccessTitle');
+  goHomeSoon();
 }
 function guestFormError(msg) {
   const fe = $('#suFormErr');
@@ -3994,7 +4756,8 @@ async function sendEntry(payload) {
   let r = null;
   for (let attempt = 0; attempt <= 3; attempt++) {
     if (attempt) await sleep(700 * 2 ** (attempt - 1));
-    r = await api('submit', { method: 'POST', body: payload, timeout: 10000 });
+    // the chosen draw; soft: "already entered", "closed" … come back as answers, not as errors in the browser's log
+    r = await api('submit', { method: 'POST', body: payload, timeout: 10000, url: guestApiUrl(), query: { soft: 1 } });
     if (!(r.network || r.notApi || r.status >= 500)) break;
   }
   return r;
@@ -4007,20 +4770,22 @@ async function guestSubmit() {
   showFieldError(suFields.email, $('#suEmailErr'), res.errors.email);
   const consent = $('#suConsent').checked;
   showFieldError($('#suConsent'), $('#suConsentErr'), consent ? '' : 'You must tick “I agree” to enter the draw.');
+  const adult = checkAdult();
   guestFormError('');
   const bad = [['name', suFields.name], ['number', suFields.number], ['email', suFields.email]].find(([k]) => res.errors[k]);
   if (bad) { bad[1].focus(); return; }
   if (!consent) { $('#suConsent').focus(); return; }
+  if (!adult) { $('#suAdult').focus(); return; }
   const v = res.values;
   const marketing = guestCfg.showMarketing && $('#suMarketing').checked;
   const sig = JSON.stringify([v.name, v.number, v.email, marketing]);
   if (!guestClient || guestClient.sig !== sig) guestClient = { id: uid(), sig };
   setGuestSending(true);
-  const r = await sendEntry({ clientId: guestClient.id, name: v.name, number: v.number, email: v.email, consent: true, marketing });
+  const r = await sendEntry({ clientId: guestClient.id, name: v.name, number: v.number, email: v.email, consent: true, adult: true, marketing });
   setGuestSending(false);
   if (r.ok) {
     guestClient = null;
-    lsSet(ENTERED_KEY, JSON.stringify({ dir: guestDir(), name: firstName(v.name), at: Date.now(), event: guestCfg.event || '' }));
+    lsSet(enteredKey(guestDir()), JSON.stringify({ dir: guestDir(), name: firstName(v.name), at: Date.now(), event: guestCfg.event || '' }));
     showGuestDone(v.name, false);
     return;
   }
@@ -4034,6 +4799,7 @@ async function guestSubmit() {
     return;
   }
   if (r.code === 'invalid' && field === 'consent') { showFieldError($('#suConsent'), $('#suConsentErr'), 'You must tick “I agree” to enter the draw.'); $('#suConsent').focus(); return; }
+  if (r.code === 'invalid' && field === 'adult') { showFieldError($('#suAdult'), $('#suAdultErr'), ADULT_MSG); $('#suAdult').focus(); return; }
   if (r.code === 'invalid' && suFields[field]) { showFieldError(suFields[field], $('#su' + field[0].toUpperCase() + field.slice(1) + 'Err'), GUEST_FIELD_MSG[field]); suFields[field].focus(); return; }
   if (r.code === 'rate_limited' || r.status === 429) { guestFormError(GUEST_MSG.rate); return; }
   if (r.network || r.notApi) { guestFormError(GUEST_MSG.network); return; }
@@ -4049,18 +4815,166 @@ let localStarted = false;
 let loginBusy = false;
 let loginWait = 0;
 const loginEl = $('#login');
-/** The guests' sign-up address: this page without #wheel / ?wheel (the client makes the QR code from it). */
-const guestAddress = () => location.origin + location.pathname;
+/** The guests' sign-up address (the client makes the QR code from it): this page without #wheel / ?wheel — in the
+    draw folders, the first one (/draw/) for every draw, because guests are sent on to the event that's running. */
+const guestAddress = () => (PAGE_SLOT ? slotInfo(DRAW_SLOTS[0]).url : location.origin + location.pathname);
+let switchedFrom = null;   // { from, hops }: this page was reached by the automatic switch from a busy draw
+let serverEventHint = '';  // this draw's event name on the server when another laptop is already running it
+let otherLive = [];        // the other draws whose events are running now (SPEC 2.19: a note for this organiser)
+let otherEvents = [];      // the other draws that hold a recent event (SPEC 2.23: "Or continue an event…")
+let switchTimer = 0;
+/* This laptop came to continue the event on this draw (SPEC 2.23, 2.24): "Stay on Draw 1 (same event)", "This is
+   my event — continue it", "Continue: Newcastle — Draw 3", or the "All draws are in use" log-in. Then it isn't
+   bounced to another draw, isn't asked again whether the draw is taken, and "Name your event" is filled in. */
+let joinIntent = false;
+const JOIN_KEY = 'map-lucky-draw:continue'; // sessionStorage (shared by the draw folders): { to, name, at }
+const switchedMsg = () => `You’re on ${PAGE_SLOT.label}. Guests use the same QR code — they’ll be asked to pick your event by name.`;
+function readSwitchedFrom() {
+  try {
+    const v = JSON.parse(sessionStorage.getItem(SWITCH_KEY) || 'null');
+    sessionStorage.removeItem(SWITCH_KEY);
+    if (v && PAGE_SLOT && v.to === PAGE_SLOT.name && Date.now() - num(v.at, 0) < 120000) return { from: str(v.from, 20), hops: num(v.hops, 1), name: cleanEventName(str(v.name || '', 60)) };
+  } catch (e) { /* storage blocked */ }
+  return null;
+}
+/** "Continue: Newcastle — Draw 3" was chosen on another draw's page: { name } of the event, or null. */
+function readJoin() {
+  try {
+    const v = JSON.parse(sessionStorage.getItem(JOIN_KEY) || 'null');
+    sessionStorage.removeItem(JOIN_KEY);
+    if (v && PAGE_SLOT && v.to === PAGE_SLOT.name && Date.now() - num(v.at, 0) < 600000) return { name: cleanEventName(v.name) };
+  } catch (e) { /* storage blocked */ }
+  return null;
+}
 
 async function startOrganiser(probe) {
   appMode = 'organiser';
-  if (probe.ok) { sync.cfg = cleanPublicConfig(probe.data); sync.open = sync.cfg.open; sync.full = sync.cfg.full; }
-  // A laptop that has never logged in (or logged out) goes straight to the log-in screen; one that may still be
-  // logged in (or can't remember) asks api.php whether its session cookie is still valid.
-  if (storageProbe() && lsGet(ORGANISER_KEY) !== '1') { showLogin(); return; }
-  const r = await api('session', { admin: true });
-  if (r.ok) { enterOrganiserApp(); return; }
-  showLogin(r.network ? 'Couldn’t reach the server. Check your internet connection, then log in.' : '');
+  if (probe.ok) { sync.cfg = cleanPublicConfig(probe.data); sync.open = sync.cfg.open; sync.full = sync.cfg.full; noteUploaded(sync.cfg); }
+  switchedFrom = readSwitchedFrom();
+  const join = readJoin();
+  if (join) joinIntent = true;
+  // 1. Already logged in to THIS draw in this browser: it's this laptop's draw, stay. A laptop that has never logged
+  //    in here (or logged out) skips the question; one that may still be logged in asks api.php.
+  if (!storageProbe() || lsGet(ORGANISER_KEY) === '1') {
+    const r = await api('session', { admin: true, query: { soft: 1 } }); // an expired log-in is no error here
+    if (r.ok) { enterOrganiserApp(); return; }
+    if (r.network) { showLogin('Couldn’t reach the server. Check your internet connection, then log in.'); return; }
+  }
+  // 2. Continuing an event chosen by name on another draw's page: straight to this draw's log-in (same event).
+  if (join) {
+    serverEventHint = (sync.cfg && sync.cfg.eventName) || join.name;
+    const name = serverEventHint;
+    showLogin(`Log in to continue ${name ? `“${name}”` : 'the event'} on ${PAGE_SLOT.label}.`, 'info');
+    return;
+  }
+  // 3. Another laptop is running this draw: offer the first free draw (SPEC 2.18 C, 2.21, 2.22).
+  if (PAGE_SLOT && sync.cfg && sync.cfg.organiserActive) {
+    serverEventHint = sync.cfg.eventName;
+    if (!switchedFrom || switchedFrom.hops < 3) { // never bounce round the draws for ever
+      const slots = await fetchSlots({ timeout: 4000, known: { [PAGE_SLOT.name]: probe } });
+      noteSlots(slots);
+      const free = slots.find(x => x.present && !x.live);
+      if (free) { showSwitchNotice(free); return; }
+    }
+    joinIntent = true; // logging in here means running the same event
+    showLogin(`All draws are in use by other laptops. Log in only if you’re running the same event as ${PAGE_SLOT.label}.`);
+    return;
+  }
+  // 4. The normal log-in.
+  showLogin(switchedFrom ? switchedMsg() : '', 'info');
+}
+/** The draw-in-use screen, shared by the notice before logging in and the one just after (SPEC 2.24, A3). */
+function openSwitchScreen({ heading, count, go, stay, mine }) {
+  const me = PAGE_SLOT.label;
+  document.documentElement.setAttribute('data-app', 'login');
+  $('#app').inert = true;
+  loginEl.hidden = true;
+  hideEventStep();
+  $('#swBrandTitle').textContent = me;
+  $('#swHeading').textContent = heading;
+  $('#swCount').textContent = count;
+  for (const [id, label] of [['#swGo', go], ['#swStay', stay], ['#swMine', mine]]) {
+    const b = $(id);
+    b.hidden = !label;
+    b.disabled = false;
+    if (label) b.textContent = label;
+  }
+  // The only way on (no other draw free): a full button rather than a link.
+  $('#swMine').className = go || stay ? 'link-btn sw-mine' : 'btn btn-primary btn-block su-submit';
+  $('#switchNotice').hidden = false;
+}
+/** "Draw 1 is already being used by another laptop. Taking you to Draw 2 in 5…" */
+function showSwitchNotice(target) {
+  const me = PAGE_SLOT.label;
+  openSwitchScreen({
+    heading: `${me} is already being used by another laptop.`, count: `Taking you to ${target.label} in 5…`,
+    go: `Go to ${target.label} now`, stay: `Stay on ${me} (same event)`, mine: 'This is my event — continue it'
+  });
+  document.title = `${me} is in use · MAP Lucky Draw`;
+  const go = () => {
+    clearTimeout(switchTimer);
+    $('#swCount').textContent = `Taking you to ${target.label}…`;
+    $('#swGo').disabled = true;
+    try { sessionStorage.setItem(SWITCH_KEY, JSON.stringify({ from: PAGE_SLOT.name, to: target.name, at: Date.now(), hops: (switchedFrom ? switchedFrom.hops : 0) + 1 })); } catch (e) { /* the banner there is optional */ }
+    location.replace(target.url + '#wheel');
+  };
+  let n = 5;
+  const tick = () => {
+    if (n <= 0) { go(); return; }
+    $('#swCount').textContent = `Taking you to ${target.label} in ${n}…`;
+    n--;
+    switchTimer = setTimeout(tick, 1000);
+  };
+  $('#swGo').onclick = go;
+  // Same event as the laptop already on this draw (a second screen, or this laptop's own event after its last one died).
+  const stay = msg => () => {
+    clearTimeout(switchTimer);
+    joinIntent = true;
+    $('#switchNotice').hidden = true;
+    showLogin(msg, 'info');
+  };
+  $('#swStay').onclick = stay(`${me} is also open on another laptop. Log in to run the same event with it.`);
+  $('#swMine').onclick = stay(`Log in to continue ${serverEventHint ? `“${serverEventHint}”` : 'your event'} on ${me}.`);
+  tick();
+  announce(`${me} is already being used by another laptop. Taking you to ${target.label} in 5 seconds.`);
+  setTimeout(() => $('#swGo').focus(), 0);
+}
+/** Right after logging in (SPEC 2.24, A3): another laptop took this draw while this one was on the log-in screen. */
+async function showTakenNotice(token) {
+  const me = PAGE_SLOT.label;
+  const slots = await fetchSlots({ timeout: 4000 });
+  if (token !== enterToken) return;
+  noteSlots(slots);
+  const free = slots.find(x => x.present && !x.live && x.name !== PAGE_SLOT.name);
+  openSwitchScreen({
+    heading: `${me} has just been taken by another laptop.`,
+    count: free ? `Go to ${free.label}, or stay if it’s the same event.` : 'No other draw is free right now.',
+    go: free ? `Go to ${free.label}` : '', stay: '', mine: 'This is my event — continue it'
+  });
+  document.title = `${me} was just taken · MAP Lucky Draw`;
+  announce(`${me} has just been taken by another laptop.`);
+  if (free) {
+    $('#swGo').onclick = async () => {
+      $('#swGo').disabled = true;
+      await leaveDraw(); // this draw is the other laptop's: don't count as using it
+      try { sessionStorage.setItem(SWITCH_KEY, JSON.stringify({ from: PAGE_SLOT.name, to: free.name, at: Date.now(), hops: (switchedFrom ? switchedFrom.hops : 0) + 1 })); } catch (e) { /* optional */ }
+      location.replace(free.url + '#wheel');
+    };
+  }
+  $('#swMine').onclick = () => {
+    joinIntent = true;
+    $('#switchNotice').hidden = true;
+    openOrganiserEvent(token);
+  };
+  setTimeout(() => (free ? $('#swGo') : $('#swMine')).focus(), 0);
+}
+/** Logs this laptop out of this draw (so it no longer counts as using it), e.g. before going to another draw. */
+async function leaveDraw() {
+  stopSync();
+  for (let i = 0; sync.busy && i < 50; i++) await sleep(100);
+  if (sync.authed) await api('logout', { method: 'POST', body: {}, admin: true, timeout: 5000 });
+  sync.authed = false;
+  lsSet(ORGANISER_KEY, '0');
 }
 function setLoginMsg(msg, kind = 'error') {
   const m = $('#liMsg');
@@ -4069,12 +4983,17 @@ function setLoginMsg(msg, kind = 'error') {
   m.dataset.kind = kind;
 }
 function showLogin(msg = '', kind = 'error') {
+  enterToken++; // anything still opening the wheel stops
   document.documentElement.setAttribute('data-app', 'login');
+  hideEventStep(); // shown again after logging in
   $('#liTitle').textContent = localStarted ? (S().title || DEFAULTS.title) : (sync.cfg ? sync.cfg.title : DEFAULTS.title);
+  $('#liSub').textContent = PAGE_SLOT ? `${PAGE_SLOT.label} · Phone sign-ups live` : 'Phone sign-ups live';
   setLoginMsg(msg, kind);
   loginEl.hidden = false;
   $('#app').inert = true;
   document.title = 'Log in · MAP Lucky Draw';
+  renderRunning();
+  refreshSlots(); // "Or continue an event that's already running" (other draws)
   setTimeout(() => $('#liPassword').focus(), 0);
 }
 onFormSubmit($('#liForm'), async () => {
@@ -4085,11 +5004,11 @@ onFormSubmit($('#liForm'), async () => {
   const btn = $('#liSubmit');
   btn.disabled = true;
   btn.textContent = 'Logging in…';
-  const r = await api('login', { method: 'POST', body: { password: inp.value }, admin: true });
+  const r = await api('login', { method: 'POST', body: { password: inp.value }, admin: true, query: { soft: 1 } }); // a wrong password is no error
   loginBusy = false;
   btn.disabled = false;
   btn.textContent = 'Log in';
-  if (r.ok) { inp.value = ''; setLoginMsg(''); enterOrganiserApp(); return; }
+  if (r.ok) { inp.value = ''; setLoginMsg(''); enterOrganiserApp({ fresh: true }); return; }
   setLoginMsg(r.code === 'password_not_set' ? 'Open api.php and set ADMIN_PASSWORD first.'
     : r.code === 'locked' || r.status === 429 ? 'Too many wrong passwords. Please wait 15 minutes and try again.'
     : r.code === 'bad_password' || r.status === 401 ? 'That password isn’t right. Please try again.'
@@ -4098,25 +5017,60 @@ onFormSubmit($('#liForm'), async () => {
   inp.select();
   inp.focus();
 });
-function enterOrganiserApp() {
+let enterToken = 0;
+/**
+ * Logged in (fresh: just now, with the password; otherwise still logged in from before). Before the wheel opens, this
+ * draw's event is read from the server and merged with this laptop's copy (SPEC 2.23, 2.24), then "Name your event".
+ */
+async function enterOrganiserApp({ fresh = false } = {}) {
   clearTimeout(loginWait);
   sync.authed = true;
   lsSet(ORGANISER_KEY, '1');
   loginEl.hidden = true;
+  $('#switchNotice').hidden = true;
+  document.documentElement.setAttribute('data-app', 'pending'); // the brand splash while the draw's event is read
+  const token = ++enterToken;
+  evDetach();
+  $('#phoneSet').hidden = false;
+  $('#psAddr').value = guestAddress();
+  $('#psAddrSlots').hidden = !PAGE_SLOT;
+  $('#sEventNameHelp').textContent = 'Names your Excel files, e.g. “Newcastle 10-10-2026.xlsx”. When more than one event is running, guests pick yours by this name.';
+  $('#footStore').textContent = 'Entries are stored in this browser; phone sign-ups also on your web server.';
+  $('#dataNote').textContent = 'Everything is stored in this browser on this device, and phone sign-ups also on your web server (see Phone sign-ups above). Export before you clear it.';
+  if (!localStarted) { localStarted = true; initLocal({ step: false }); }
+  // A3: a laptop that has just logged in without coming to continue this draw's event: did another laptop take the
+  // draw while this one was on the log-in screen?
+  if (fresh && PAGE_SLOT && !joinIntent) {
+    const r = await api('session', { admin: true });
+    if (token !== enterToken) return;
+    if (r.status === 401) { requireLogin(); return; }
+    if (r.ok && r.data.othersActive === true) { showTakenNotice(token); return; }
+  }
+  openOrganiserEvent(token);
+}
+/** Reads this draw's event from the server, then the wheel opens behind "Name your event" (SPEC 2.20). */
+async function openOrganiserEvent(token) {
+  document.documentElement.setAttribute('data-app', 'pending');
+  const hold = await evRestore();
+  if (token !== enterToken || !sync.authed) return;
   document.documentElement.setAttribute('data-app', 'organiser');
   $('#app').inert = false;
   document.title = 'MAP Lucky Draw';
-  $('#phoneSet').hidden = false;
-  $('#psAddr').value = guestAddress();
-  $('#footStore').textContent = 'Entries are stored in this browser; phone sign-ups also on your web server.';
-  $('#dataNote').textContent = 'Everything is stored in this browser on this device, and phone sign-ups also on your web server (see Phone sign-ups above). Export before you clear it.';
-  if (!localStarted) { localStarted = true; initLocal(); }
-  else { renderAll(); scheduleMeasure(); }
+  measureWheel();
+  renderAll();
+  scheduleMeasure();
   startSync();
+  refreshSlots();
+  if (hold) hold.joined = joinIntent;
+  evJoined = joinIntent; // for a late first read of the draw's event (see evApply)
+  joinIntent = false;
+  showEventStep(afterWheelOpen, { hold }); // then: an unfinished winner card, or the first-visit guide
 }
 /** 401 from api.php: back to the log-in screen, but never over a draw in progress (it waits for the winner card). */
 function requireLogin() {
+  clearTimeout(switchTimer);
   stopSync();
+  evDetach();
   sync.authed = false;
   lsSet(ORGANISER_KEY, '0');
   sync.reconciled = false;
@@ -4185,9 +5139,13 @@ function mergePhone(list, epoch, restore) {
     if (room <= 0) { out.waiting = rows.length - i; break; }
     room--;
     const at = isoOr(r.receivedAt, new Date().toISOString());
+    // A sign-up as it arrived is the same record on every laptop of this draw (same id), with the lowest possible
+    // edit time, so whatever any laptop did with that person since (drawn, removed, edited) always wins over it.
+    // "Re-sync all" brings someone back on purpose, so that counts as an edit.
     const e = {
       id, name, number, email, weight: 1, consent: r.consent !== false, marketing: r.marketing === true,
-      consentAt: isoOr(r.consentAt, at), createdAt: at, source: 'phone', status: 'active', pos: pos++, updatedAt: stamp()
+      consentAt: isoOr(r.consentAt, at), createdAt: at, source: 'phone', status: 'active', pos: pos++, updatedAt: restore ? stamp() : 1,
+      ...(r.adult === true ? { adult: true } : {}) // confirmed "I am aged 18 or over" (SPEC 2.25)
     };
     delete state.tomb[id]; // "Re-sync all" brings back a sign-up deleted on this laptop
     state.entries.push(e);
@@ -4200,21 +5158,12 @@ function mergePhone(list, epoch, restore) {
   if (last) { flashId = last.id; commit(); }
   return out;
 }
-/** One check for new sign-ups (restore: read them all again from the start). Resolves to a summary, or null. */
-/** Tells api.php who has won (by phone number and email), so the server's Excel backup marks them "Winner" too. */
-async function pushWinners() {
-  const won = new Set(state.log.filter(r => r.type === 'Winner').map(r => r.entryId));
-  const list = state.entries.filter(e => won.has(e.id)).map(e => ({ number: e.number, email: e.email }));
-  const sig = JSON.stringify(list);
-  if (sig === sync.winnersSig) return;
-  const r = await api('setWinners', { method: 'POST', body: { winners: list }, admin: true });
-  if (r.ok) sync.winnersSig = sig;
-}
+/** One check for new sign-ups (restore: read them all again from the start). Resolves to a summary, or null.
+    It also tells this laptop when the draw's event changed on the server (another laptop, or New event). */
 async function pollPhone({ restore = false } = {}) {
   if (!sync.on || sync.busy) return null;
-  if (sync.authed && !spinning) pushWinners().catch(() => {});
   // The wheel never changes mid-spin: new sign-ups wait (queued on the server) and are fetched once it lands.
-  if (spinning) { schedulePoll(400); return null; }
+  if (spinning || spinPrep) { schedulePoll(400); return null; }
   clearTimeout(sync.timer);
   sync.busy = true;
   sync.again = false;
@@ -4223,14 +5172,21 @@ async function pollPhone({ restore = false } = {}) {
   try {
     let since = restore ? 0 : sync.since;
     for (let page = 0; page < 8; page++) {
+      const t0 = Date.now();
       const r = await api('entries', { query: { since }, admin: true });
       if (r.status === 401) { sum = null; requireLogin(); return null; }
       if (!r.ok) throw new Error('entries: ' + r.status);
       const d = r.data;
       const epoch = String(d.epoch == null ? '' : d.epoch);
+      if (page === 0) {
+        evClock(d.now, t0, Date.now());
+        // The draw's event first (another laptop's winners, people, New event), then the new sign-ups on top.
+        await evCheck(d);
+        if (spinning || spinPrep || !sync.authed) break;
+        if (!restore && sync.since !== since) { since = sync.since; continue; } // read everything again (new event / restored)
+      }
       if (sync.epoch !== null && epoch !== sync.epoch) {
-        // The sign-ups on the server were cleared elsewhere (new epoch): read the new set from the start.
-        operatorNote('The phone sign-ups on the server were cleared.', { detail: 'Entries already on this laptop are kept.' });
+        // This laptop's cursor is from another epoch: read the server's sign-ups from the start (known ones are skipped).
         sync.epoch = epoch;
         sync.since = 0;
         saveCursor();
@@ -4258,6 +5214,7 @@ async function pollPhone({ restore = false } = {}) {
     sync.fails = 0;
     sync.lastOk = Date.now();
     if (++sync.polls % 5 === 0) refreshConfig(); // open / closed / full, in case it changed elsewhere
+    if (sync.polls % 15 === 0) refreshSlots();   // which other events are running (about every 30 s)
   } catch (e) {
     sum = null;
     sync.fails++;
@@ -4276,26 +5233,88 @@ async function refreshConfig() {
   if (!r.ok) return null;
   const c = cleanPublicConfig(r.data);
   sync.cfg = c;
+  noteUploaded(c);
   sync.open = c.open;
   sync.full = c.full;
   if (!sync.reconciled && sync.authed) { sync.reconciled = true; reconcileTexts(c); }
   updatePill();
   return c;
 }
+/** Which other draws' events are running now (about every 30 s): the "Name your event" note and Settings hint. */
+let slotsBusy = false;
+async function refreshSlots() {
+  if (!PAGE_SLOT || slotsBusy || appMode !== 'organiser') return;
+  slotsBusy = true;
+  try {
+    noteSlots(await fetchSlots({ timeout: 6000 }));
+  } finally {
+    slotsBusy = false;
+  }
+}
+/** From every draw's public config: the other events running now, and the other draws holding a recent event
+    (an organiser checked in within the last 12 hours) that this laptop could continue (SPEC 2.23). */
+function noteSlots(slots) {
+  if (!PAGE_SLOT) return;
+  otherLive = slots.filter(x => x.live && x.name !== PAGE_SLOT.name);
+  otherEvents = slots.filter(x => x.present && x.name !== PAGE_SLOT.name && x.cfg.hasEvent && x.cfg.eventName
+    && x.cfg.lastActiveAgo != null && x.cfg.lastActiveAgo < 12 * 3600);
+  renderOthers();
+  renderRunning();
+}
+/** "Or continue an event that's already running: Continue: Newcastle — Draw 3" (log-in screen and "Name your event"). */
+let runningSig = '';
+function renderRunning() {
+  const list = appMode === 'organiser' && PAGE_SLOT ? otherEvents : [];
+  const sig = JSON.stringify(list.map(x => [x.name, x.cfg.eventName]));
+  for (const box of [$('#evRunning'), $('#liRunning')]) box.hidden = !list.length;
+  if (sig === runningSig) return;
+  runningSig = sig;
+  for (const box of [$('#evRunning'), $('#liRunning')]) {
+    $('ul', box).replaceChildren(...list.map(x => h('li', null,
+      h('button', { type: 'button', class: 'ev-run-btn', dataset: { slot: x.name }, onclick: ev => continueOther(x, ev.currentTarget) },
+        h('span', { class: 'ev-run-text', dir: 'auto' }, h('span', { class: 'k', text: 'Continue: ' }), h('strong', { text: x.cfg.eventName }), ` — ${x.label}`),
+        icon('chevron', 'ic')))));
+  }
+}
+/** Go to that draw to continue its event: no "in use" switching there, log in if needed, its event is restored. */
+async function continueOther(slot, btn) {
+  for (const b of $$('.ev-run-btn')) b.disabled = true;
+  try { sessionStorage.setItem(JOIN_KEY, JSON.stringify({ to: slot.name, name: slot.cfg.eventName, at: Date.now() })); } catch (e) { /* that draw then asks */ }
+  if (sync.authed && evStepOpen) await leaveDraw(); // this draw isn't being used after all
+  location.assign(slot.url + '#wheel');
+}
+function renderOthers() {
+  if (appMode !== 'organiser') return;
+  const n = otherLive.length;
+  $('#evOthers').hidden = !n;
+  if (n) $('#evOthers span').textContent = `${n === 1 ? 'Another event is' : `${n} other events are`} running at the same time. Guests will pick your event by this name.`;
+  const el = $('#psOthers');
+  el.hidden = !n;
+  if (!n) return;
+  const list = otherLive.map(x => (x.cfg.eventName ? `${x.label} (“${x.cfg.eventName}”)` : x.label)).join(', ');
+  const msg = `${n === 1 ? 'Another event is' : `${n} other events are`} running at the same time: ${list}. Guests scan the same QR code and pick your event by its name${state.ev.name ? `, “${state.ev.name}”` : ''}.`;
+  if (el.textContent !== msg) el.textContent = msg;
+}
 function serverTexts() {
   const s = S();
   return {
     title: s.title || DEFAULTS.title, subtitle: s.subtitle, consentText: s.consentText || DEFAULT_CONSENT,
-    marketingText: s.marketingText || DEFAULT_MARKETING, showMarketing: !!s.showMarketing
+    marketingText: s.marketingText || DEFAULT_MARKETING, showMarketing: !!s.showMarketing,
+    // The event's name (guests choose their event by it; it names the server's Excel backup). Only once this
+    // laptop's event has one, so a laptop joining a running draw never blanks it ("New event" clears it on the server).
+    ...(state.ev.name ? { eventName: state.ev.name, eventDate: state.ev.date } : {})
   };
 }
 /** After logging in: a laptop whose settings were never changed shows what the phones show; otherwise it updates them. */
 function reconcileTexts(c) {
   const local = serverTexts();
-  if (!SERVER_TEXT_KEYS.some(k => local[k] !== c[k])) return;
-  if (!S().updatedAt) {
+  const texts = SERVER_TEXT_KEYS.some(k => local[k] !== c[k]);
+  const name = !!state.ev.name && c.eventName !== state.ev.name;
+  if (!texts && !name) return;
+  if (texts && !S().updatedAt) {
     state.settings = { ...S(), title: c.title, subtitle: c.subtitle, consentText: c.consentText, marketingText: c.marketingText, showMarketing: c.showMarketing, updatedAt: stamp() };
     commit();
+    if (name) pushConfig();
   } else pushConfig();
 }
 const pushTextsSoon = debounce(() => { if (appMode === 'organiser' && sync.authed) pushConfig(); }, 800);
@@ -4305,7 +5324,11 @@ async function pushConfig(extra = {}) {
   const body = { open: sync.open !== false, ...serverTexts(), ...extra };
   const r = await api('setConfig', { method: 'POST', body, admin: true });
   if (r.status === 401) { requireLogin(); return r; }
-  if (r.ok) { sync.open = body.open; updatePill(); }
+  if (r.ok) {
+    sync.open = body.open;
+    if (r.data && r.data.config) sync.cfg = cleanPublicConfig(r.data.config);
+    updatePill();
+  }
   else {
     toast('Couldn’t update the guests’ sign-up page.', {
       type: 'error',
@@ -4401,13 +5424,20 @@ $('#psXlsx').addEventListener('click', async ev => {
     res = await fetch(url.href, { credentials: 'same-origin', cache: 'no-store' });
     if (res.ok) bytes = await res.arrayBuffer();
   } catch (e) { res = null; }
+  // "<Event name> <DD-MM-YYYY> (server backup).xlsx": the server's name for it (RFC 6266 filename*), else ours.
+  let name = `${exportStem()} (server backup).xlsx`;
+  try {
+    const m = /filename\*\s*=\s*UTF-8''([^;]+)/i.exec((res && res.headers.get('Content-Disposition')) || '');
+    const n = m ? cleanLine(decodeURIComponent(m[1].trim())) : '';
+    if (n && /\.xlsx$/i.test(n) && !/[\\/:*?"<>|]/.test(n)) name = n;
+  } catch (e) { /* keep ours */ }
   b.disabled = false;
   if (res && res.status === 401) { requireLogin(); return; }
   if (!bytes || new Uint8Array(bytes.slice(0, 2))[0] !== 0x50) {
     toast('Couldn’t download the Excel backup from the server. Try again in a moment.', { type: 'error' });
     return;
   }
-  download(`map-lucky-draw-sign-ups-${dateStamp()}.xlsx`, new Blob([bytes], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
+  download(name, new Blob([bytes], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
 });
 $('#psResync').addEventListener('click', async ev => {
   const b = ev.currentTarget;
@@ -4425,13 +5455,14 @@ $('#psClear').addEventListener('click', async () => {
   if (isLocked()) { toast('Finish the current draw first.'); return; }
   const v = await askConfirm({
     title: 'Clear all sign-ups on the server?',
-    text: 'This permanently deletes every phone sign-up stored by api.php on your web server. Entries already on this laptop stay here (download the Excel file first if you need them). Type DELETE to confirm.',
+    text: 'This permanently deletes every phone sign-up stored by api.php on your web server, and its Excel backup. Entries already on this laptop stay here, and in this draw’s event backup on the server (download the Excel file first if you need them; New event deletes everything). Type DELETE to confirm.',
     ok: 'Delete from server', danger: true,
     input: { label: 'Type DELETE to confirm', type: 'text', inputMode: 'text', maxLength: 12, autocapitalize: 'characters' },
     validate: val => (val.trim() === 'DELETE' ? '' : 'Type DELETE in capital letters to confirm.')
   });
   if (v == null) return;
-  const r = await api('clear', { method: 'POST', body: { confirm: 'DELETE' }, admin: true });
+  await evIdle();
+  const r = await api('clear', { method: 'POST', body: { confirm: 'DELETE', keepEvent: true }, admin: true });
   if (r.status === 401) { requireLogin(); return; }
   if (!r.ok) { toast('Couldn’t clear the sign-ups on the server.', { type: 'error', detail: r.network ? 'The server can’t be reached. Try again in a moment.' : `Error ${r.status}.` }); return; }
   // Start again on the server's new epoch without the "cleared elsewhere" note.
@@ -4439,6 +5470,7 @@ $('#psClear').addEventListener('click', async () => {
   sync.since = 0;
   sync.total = 0;
   saveCursor();
+  if (typeof r.data.epoch === 'string') evQuietEpoch = r.data.epoch;
   toast('All sign-ups were deleted from the server.', { detail: 'Entries already on this laptop are kept.' });
   refreshConfig();
   pollNow();
@@ -4446,6 +5478,10 @@ $('#psClear').addEventListener('click', async () => {
 $('#psLogout').addEventListener('click', async () => {
   if (isLocked()) { toast('Finish the current draw first.'); return; }
   stopSync();
+  // A check still under way would mark this draw as in use again just after logging out: let it finish first.
+  for (let i = 0; sync.busy && i < 100; i++) await sleep(100);
+  await evPush();  // anything not yet backed up on the server goes first
+  evDetach();
   await api('logout', { method: 'POST', body: {}, admin: true });
   sync.authed = false;
   lsSet(ORGANISER_KEY, '0');
@@ -4458,6 +5494,456 @@ window.addEventListener('focus', () => pollNow());
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') pollNow(); });
 
 /* ---------------------------------------------------------------------
+   15b. The draw's whole event on the server (SPEC 2.23, 2.24)
+        Each laptop on a draw keeps the whole event (everyone on the wheel, the winner log, the round, the prize,
+        the event's name) in api.php (action=eventState) and merges what the other laptops of that draw stored.
+        So a laptop that dies can be replaced by another one with nothing lost, and two laptops on one draw stay in
+        step: a person drawn on one is off the other's wheel before it spins. Every store names the version it was
+        based on; if another laptop stored first, this one merges (newest edit wins, per person / record) and tries
+        again. "New event" on any laptop clears it, and the others start the new event too.
+   --------------------------------------------------------------------- */
+const EV_PUSH_MS = 1500;        // a change is sent this long after the last edit (at most EV_PUSH_MAX_MS later)…
+const EV_PUSH_MAX_MS = 5000;
+const EV_HEARTBEAT_MS = 30000;  // …and anything not yet on the server is retried at least this often
+const evSync = {
+  ready: false,    // this laptop has read the draw's event since logging in: only then does it send its own
+  epoch: null,     // the server's epoch (api.php) the event belongs to
+  version: -1,     // the server's version of the event that this laptop has merged
+  base: null,      // what the server holds (record → edit time), so only real changes are sent
+  queue: Promise.resolve(), pushTimer: 0, dirtySince: 0, retryMs: 0, tooBig: false, heartbeat: 0,
+  eventId: '',     // the server's id of the event this draw holds (new on "New event", kept when sign-ups are cleared)
+  cursor: null     // the sign-up cursor's epoch as this laptop had it when it logged in (before any check this time)
+};
+/** This laptop's event belongs to the server's epoch E, i.e. to the event the draw holds now. */
+const evBind = E => ({ id: E, at: stamp(), ev: evSync.eventId || '' });
+/** Since logging in (or reloading) this laptop came to continue the event this draw holds ("Stay", "Continue: …"). */
+let evJoined = false;
+let evAdoptedCard = '';   // a winner card taken over from a laptop that went away (its hint says so)
+let evQuietEpoch = '';    // this laptop cleared the sign-ups itself: no "cleared elsewhere" note for that epoch
+const evOn = () => appMode === 'organiser' && sync.authed && evSync.ready;
+/** One request about the event at a time (reads and stores never overlap). */
+function evRun(fn) {
+  const p = evSync.queue.then(fn).catch(() => null);
+  evSync.queue = p.then(() => {}, () => {});
+  return p;
+}
+function evIdle() { clearTimeout(evSync.pushTimer); return evSync.queue; }
+/** Forget what the server holds (logged out, or about to read it again): nothing is sent until it has been read. */
+function evDetach() {
+  evSync.ready = false;
+  evSync.version = -1;
+  evSync.base = null;
+  clearTimeout(evSync.pushTimer);
+}
+/** This laptop's clock against the server's (half the round trip either way), so edits on every laptop compare. */
+function evClock(now, t0, t1) {
+  if (!Number.isFinite(now) || now <= 0 || t1 - t0 > 4000) return;
+  const sk = Math.round(now - (t0 + t1) / 2);
+  if (Math.abs(sk - clockSkew) > 1000) clockSkew = sk;
+}
+const evHasContent = st => !!(st.entries.length || st.log.length || st.ev.name);
+/** When the held event began: when it was named, else its first entry or draw. */
+function evHoldSince(st) {
+  if (st.ev.at) return st.ev.at;
+  let m = Infinity;
+  for (const e of st.entries) { const t = Date.parse(e.createdAt); if (t < m) m = t; }
+  for (const r of st.log) { const t = Date.parse(r.at); if (t < m) m = t; }
+  return Number.isFinite(m) ? m : (st.ev.updatedAt || 0);
+}
+/** Record ids → edit times of an event (local, or the server's copy). */
+function evSig(st) {
+  const e = new Map(), l = new Map(), pd = {};
+  for (const r of st.entries) e.set(r.id, r.updatedAt);
+  for (const r of st.log) l.set(r.id, r.updatedAt);
+  for (const [k, p] of Object.entries(st.pend)) pd[k] = p.updatedAt;
+  return { ep: st.epoch.id, e, l, t: { ...st.tomb }, m: st.meta.updatedAt, ev: st.ev.updatedAt, p: st.settings.prizeAt || 0, pd };
+}
+const evEmptySig = ep => ({ ep, e: new Map(), l: new Map(), t: {}, m: 0, ev: 0, p: 0, pd: {} });
+/** Does this laptop hold anything the server's copy (sig) lacks? */
+function evNewer(st, b) {
+  if (!b || st.epoch.id !== b.ep) return true;
+  for (const r of st.entries) { const u = b.e.get(r.id); if (u === undefined || r.updatedAt > u) return true; }
+  for (const r of st.log) { const u = b.l.get(r.id); if (u === undefined || r.updatedAt > u) return true; }
+  for (const [k, v] of Object.entries(st.tomb)) if (!(b.t[k] >= v)) return true;
+  for (const [k, p] of Object.entries(st.pend)) if (!(b.pd[k] >= p.updatedAt)) return true;
+  return st.meta.updatedAt > b.m || st.ev.updatedAt > b.ev || (st.settings.prizeAt || 0) > b.p;
+}
+/** The event as stored on the server: no settings of this laptop (theme, sound, PIN …) except the prize box. */
+function evDoc() {
+  const s = state;
+  return {
+    v: 1, app: 'map-lucky-draw', srv: evSync.epoch, epoch: s.epoch, entries: s.entries, log: s.log, tomb: s.tomb, meta: s.meta,
+    ev: s.ev, pend: s.pend, prize: { value: S().prize, updatedAt: S().prizeAt || 0 }, savedAt: new Date().toISOString()
+  };
+}
+/** The server's copy as a state (this laptop's own settings, with the copy's prize). */
+function evReadDoc(raw) {
+  if (!raw || typeof raw !== 'object') return null;
+  const d = cleanState(raw, { legacy: false });
+  if (!d) return null;
+  const pz = raw.prize && typeof raw.prize === 'object' ? raw.prize : {};
+  d.settings = { ...S(), prize: str(cleanText(pz.value), 120), prizeAt: num(pz.updatedAt, 0) };
+  return d;
+}
+/** Merge the server's copy into this laptop's event (same server epoch): newest edit wins, per record. */
+function evMerge(doc, { notify = true } = {}) {
+  const seen = new Set(state.log.map(r => r.id));
+  let a = state;
+  // Both belong to the server's current epoch, so they are one event, whatever this laptop called it before.
+  if (a.epoch.id !== doc.epoch.id) a = { ...a, epoch: { id: doc.epoch.id, at: Math.max(Date.now(), a.epoch.at + 1, doc.epoch.at) } };
+  let m = mergeStates(a, { ...doc, settings: a.settings, srv: a.srv });
+  if ((doc.settings.prizeAt || 0) > (m.settings.prizeAt || 0)) {
+    m = { ...m, settings: { ...m.settings, prize: doc.settings.prize, prizeAt: doc.settings.prizeAt, updatedAt: stamp() } };
+  }
+  if (m.srv.id !== evSync.epoch || (evSync.eventId && m.srv.ev !== evSync.eventId)) m = { ...m, srv: evBind(evSync.epoch) };
+  state = m;
+  // Two laptops that each added someone at 1,999 (SPEC 2.4: at most 2,000 on the wheel): the newest go off again.
+  const over = isLocked() ? 0 : evTrimToCap();
+  if (over) operatorNote(`The wheel is full (${MAX_ON_WHEEL.toLocaleString('en-GB')} entries): ${plural(over, 'person')} added at the same time on another laptop ${over === 1 ? 'was' : 'were'} taken off it again.`, { type: 'error', detail: 'They are still in the Entries list (Removed).' });
+  if (!notify) return;
+  // The other laptop's draws: its winner card stays on that laptop; this one just shows the outcome.
+  for (const r of state.log) {
+    if (!seen.has(r.id) && r.type === 'Winner' && Date.now() - Date.parse(r.at) < 600000) {
+      operatorNote(`Round ${r.round}: ${r.name} was drawn on another laptop.`, { detail: 'They’re off the wheel here too.' });
+    }
+  }
+}
+/** More than MAX_ON_WHEEL people on the wheel after a merge: the newest additions (typed in or imported first, then
+    phone sign-ups) are taken off again, the same ones on every laptop. Returns how many. */
+function evTrimToCap() {
+  const act = activeEntries();
+  const over = act.length - MAX_ON_WHEEL;
+  if (over <= 0) return 0;
+  const t = e => Date.parse(e.createdAt) || 0;
+  const order = act.slice().sort((a, b) => ((a.source === 'phone') - (b.source === 'phone')) || (t(b) - t(a)) || (a.id < b.id ? 1 : -1));
+  for (const e of order.slice(0, over)) { e.status = 'removed'; e.updatedAt = stamp(); }
+  return over;
+}
+/** This laptop's copy is from an earlier event (or there is none): the server's copy replaces it (settings stay).
+    Without a copy on the server nothing is known yet: an empty prize box that never outranks another laptop's prize. */
+function evReplace(doc, E) {
+  const keep = S();
+  const base = doc || freshState();
+  state = {
+    ...freshState(), entries: base.entries, log: base.log, tomb: base.tomb, meta: base.meta, ev: base.ev, pend: base.pend,
+    settings: { ...keep, prize: doc ? doc.settings.prize : '', prizeAt: doc ? doc.settings.prizeAt : 0, updatedAt: stamp() },
+    epoch: { id: doc ? doc.epoch.id : 's:' + E, at: Math.max(Date.now(), state.epoch.at + 1) },
+    srv: evBind(E)
+  };
+  editingId = null;
+  sync.epoch = E; sync.since = 0; sync.total = null; // read every sign-up again (the ones already here are skipped)
+  saveCursor();
+}
+/**
+ * A laptop that went away left its winner card open, and no other laptop is on this draw now: this one finishes it.
+ * A card from before a later draw (that laptop's winner was drawn, then more rounds here) isn't reopened: it is
+ * finished as it stands (the default action: the person stays a winner). Returns true when anything changed.
+ */
+function evAdoptCard() {
+  if (myPending()) return false;
+  let best = null, key = '';
+  const stale = [];
+  for (const [k, p] of Object.entries(state.pend)) {
+    if (k === deviceId() || !p.logId) continue;
+    const rec = state.log.find(r => r.id === p.logId);
+    if (!rec || rec.type !== 'Winner') continue;
+    const at = Date.parse(rec.at);
+    if (rec.round < state.meta.round || state.log.some(r => r.id !== rec.id && Date.parse(r.at) > at)) { stale.push(k); continue; }
+    if (!best || p.updatedAt > best.updatedAt) { best = p; key = k; }
+  }
+  for (const k of stale) state.pend = { ...state.pend, [k]: { logId: '', redraw: false, marked: false, updatedAt: stamp() } };
+  if (!best) return stale.length > 0;
+  state.pend = { ...state.pend, [key]: { logId: '', redraw: false, marked: false, updatedAt: stamp() } };
+  setMyPending(best);
+  evAdoptedCard = best.logId;
+  return true;
+}
+/** No other laptop is on this draw now: a claim it left (it went away mid-spin) no longer keeps anyone off the wheel. */
+function evForgetClaims() {
+  const me = deviceId();
+  for (const [k, p] of Object.entries(state.pend)) {
+    if (k !== me && p.claim) { const { claim, claimAt, claimFor, ...rest } = p; state.pend = { ...state.pend, [k]: rest }; }
+  }
+}
+/** Later checks (SPEC 2.24, R1-4): once the laptop that drew a winner has gone, its open card comes here. */
+function evAdoptLater() {
+  if (!evOn() || isLocked() || signupOpen || newEventBusy) return;
+  evForgetClaims();
+  if (!evAdoptCard()) return;
+  commit();
+  if (!evStepOpen && !anyModalOpen()) restorePendingWinner();
+}
+/** Another laptop pressed New event on this draw (SPEC 2.24, A5): start the new event here too. */
+function evAdoptNewEvent(doc) {
+  const E = evSync.epoch;
+  const old = evHasContent(state) ? state : null; // this laptop's copy of the event that was just deleted
+  dismissWinnerCard();
+  if (confirmState) endConfirm(null);
+  if (eventMode) exitEvent();
+  state = {
+    ...freshState(), settings: { ...S(), prize: '', prizeAt: 0, updatedAt: stamp() },
+    epoch: { id: 's:' + E, at: Math.max(Date.now(), state.epoch.at + 1) }, srv: evBind(E)
+  };
+  editingId = null;
+  evRedraw = null;
+  sync.epoch = E; sync.since = 0; sync.total = 0;
+  saveCursor();
+  try { localStorage.removeItem(ENTERED_KEY); } catch (e) { /* ignore */ }
+  serverEventHint = '';
+  if (doc) evMerge(doc, { notify: false });
+  toast(`${PAGE_SLOT ? PAGE_SLOT.label : 'This draw'} was started afresh on another laptop (New event).`, {
+    detail: 'Everything from the last event has been deleted here too.', timeout: old ? 60000 : 9000,
+    // Last chance for its Excel file (in case that wasn't meant to happen): built from this laptop's old copy.
+    action: old ? { label: 'Download its Excel', fn: () => { const cur = state; state = old; try { downloadXlsx(); } finally { state = cur; } } } : null
+  });
+  return true;
+}
+/** The newest edit or arrival in an event (ms). */
+function evLastEdit(st) {
+  let m = Math.max(st.meta.updatedAt || 0, st.ev.updatedAt || 0, st.settings.prizeAt || 0);
+  for (const e of st.entries) m = Math.max(m, e.updatedAt || 0, Date.parse(e.createdAt) || 0);
+  for (const r of st.log) m = Math.max(m, r.updatedAt || 0, Date.parse(r.at) || 0);
+  return m;
+}
+/* An event this laptop left on a draw some time ago (e.g. yesterday's, SPEC 2.16, R1-1): named on another day, or
+   nobody has used the draw for this long and nothing in the event changed. "Name your event" then asks whether to
+   continue it, as on any other laptop, instead of quietly renaming it. */
+const EV_STALE_MS = 2 * 3600e3;
+function evStale(st) {
+  if (st.ev.date && st.ev.date !== todayDMY()) return true;
+  const ago = sync.cfg && sync.cfg.lastActiveAgo != null ? sync.cfg.lastActiveAgo * 1000 : Infinity; // before this visit
+  return ago >= EV_STALE_MS && Date.now() + clockSkew - evLastEdit(st) >= EV_STALE_MS;
+}
+/**
+ * Apply an answer about the server's copy ({ epoch, version, epochFrom, eventId, signups, othersActive, state }).
+ * initial (logging in, reloading), and the first answer at all when that read failed (late): this laptop's copy is
+ * from another (earlier) event → the server's replaces it; the same event → merged. Returns what this draw holds for
+ * "Name your event" (or null); a late answer shows that itself. Later: merged, or the epoch changed (New event
+ * elsewhere, or a laptop that missed it → start the draw's event here too; only the sign-ups cleared, or a new data
+ * folder → keep and re-send).
+ */
+function evApply(d, { initial = false } = {}) {
+  const E = typeof d.epoch === 'string' ? d.epoch : '';
+  if (!E || !Number.isInteger(d.version)) return null;
+  // The first answer since logging in came only now (that read failed, B2): the same decision as when logging in,
+  // but never under an open card or dialog (next time).
+  const late = !initial && !evSync.ready;
+  if (late && (isLocked() || anyModalOpen() || newEventBusy)) return 'later';
+  const doc = d.state && typeof d.state === 'object' ? evReadDoc(d.state) : null;
+  const others = d.othersActive === true;
+  const evId = typeof d.eventId === 'string' ? d.eventId : '';
+  let hold = null;
+  let newEventStep = false;
+  let aside = null;
+  if (initial || late) {
+    const serverHas = (!!doc && evHasContent(doc)) || num(d.signups, 0) > 0;
+    // Only the sign-ups were cleared since this laptop was last here: the same event.
+    const sameEvent = !!evId && state.srv.ev === evId && !!state.srv.id;
+    const cur = late ? evSync.cursor : sync.epoch;
+    const legacy = !state.srv.id && evHasContent(state)
+      && (cur === E || (cur == null && !serverHas)); // this laptop was already using this draw (older version), or it's empty
+    evSync.epoch = E;
+    evSync.eventId = evId;
+    if (state.srv.id === E || sameEvent || legacy) {
+      if (state.srv.id !== E || (evId && state.srv.ev !== evId)) state = { ...state, srv: evBind(E) };
+      if (doc) evMerge(doc, { notify: false });
+      // This laptop's own event, but from some time ago: ask before it carries on under a new name (R1-1).
+      if (evHasContent(state) && evStale(state)) hold = { name: state.ev.name, since: evHoldSince(state), others, ago: null, stale: true };
+    } else {
+      if (late && (state.entries.length || state.log.length)) aside = state; // what this laptop did before it could read the draw
+      evReplace(doc, E);
+      if (serverHas) hold = { name: state.ev.name, since: evHoldSince(state), others, ago: others || !Number.isFinite(d.othersAgo) ? null : d.othersAgo };
+    }
+    if (doc && d.othersActive === false) { evForgetClaims(); evAdoptCard(); }
+  } else {
+    const known = evSync.epoch;
+    evSync.eventId = evId || evSync.eventId;
+    if (known && known !== E) {
+      if (spinning) return 'later'; // the wheel is frozen mid-spin: next time
+      evSync.epoch = E;
+      // Same event as this laptop's (only the sign-ups were cleared), or a new data folder that holds nothing yet:
+      // keep it and send it again. Anything else is another event (New event, maybe while this laptop was asleep):
+      // this laptop starts that one too, and never merges its old copy into it (B1).
+      const serverHas = (!!doc && evHasContent(doc)) || num(d.signups, 0) > 0;
+      const keep = d.epochFrom !== 'newEvent' && (!evId ? true : (state.srv.ev === evId || (d.epochFrom === 'start' && !serverHas)));
+      if (!keep) newEventStep = evAdoptNewEvent(doc);
+      else {
+        state = { ...state, srv: evBind(E) };
+        if (doc) evMerge(doc, { notify: false });
+        sync.epoch = E; sync.since = 0; saveCursor();
+        if (evQuietEpoch !== E) operatorNote('The phone sign-ups on the server were cleared.', { detail: 'Entries already on this laptop are kept.' });
+      }
+    } else {
+      evSync.epoch = E;
+      if (state.srv.id === E && evId && state.srv.ev !== evId) state = { ...state, srv: evBind(E) }; // bound before event ids
+      if (doc && state.srv.id === E) evMerge(doc);
+    }
+  }
+  evSync.version = d.version;
+  evSync.base = doc ? evSig(doc) : evEmptySig(state.epoch.id);
+  evSync.ready = true;
+  commit();
+  checkWinnerCard();
+  if (late) {
+    if (aside) {
+      const draw = PAGE_SLOT ? PAGE_SLOT.label : 'This draw';
+      toast(hold ? `${draw} still holds ${hold.name ? `“${hold.name}”` : 'sign-ups from an earlier event'}.` : `${draw} holds a different event from this laptop’s.`, {
+        detail: 'What this laptop had before it could read the draw’s event was set aside.', timeout: 60000,
+        action: { label: 'Download its Excel', fn: () => { const cur = state; state = aside; try { downloadXlsx(); } finally { state = cur; } } }
+      });
+    }
+    if (hold) { hold.joined = evJoined; showEventStep(evStepOpen ? evStepThen : afterWheelOpen, { hold }); return null; }
+  }
+  if (newEventStep) showEventStep(evStepOpen ? evStepThen : null);
+  else if (evStepOpen && !evHold && !evNameInp.value && state.ev.name) { evNameInp.value = state.ev.name; renderEvFile(); } // named on another laptop meanwhile
+  return hold;
+}
+/** Before the wheel opens (log-in, reload, after Delete ALL data): read this draw's event. Returns what it holds. */
+async function evRestore() {
+  evDetach();
+  if (sync.epoch === null) loadCursor();
+  evSync.cursor = sync.epoch;
+  const t0 = Date.now();
+  const r = await evRun(() => api('eventState', { admin: true, timeout: 12000 }));
+  if (!r || !r.ok) {
+    if (r && r.status === 401) { requireLogin(); return null; }
+    toast('Couldn’t read this draw’s event from the server.', { type: 'error', detail: 'The wheel opens with what this laptop has, and keeps trying.' });
+    return null;
+  }
+  evClock(r.data.now, t0, Date.now());
+  return evApply(r.data, { initial: true });
+}
+/** Has the server's copy changed? Then merge it (full: always read it). */
+function evFetch({ full = false } = {}) {
+  return evRun(async () => {
+    if (appMode !== 'organiser' || !sync.authed) return false;
+    const have = !full && evSync.ready && evSync.version >= 0;
+    const t0 = Date.now();
+    const r = await api('eventState', { admin: true, timeout: 12000, query: have ? { have: evSync.version } : null });
+    if (r.status === 401) { requireLogin(); return false; }
+    if (!r.ok) return false;
+    evClock(r.data.now, t0, Date.now());
+    if (r.data.unchanged) return true;
+    return evApply(r.data) !== 'later';
+  });
+}
+/** Each check for sign-ups also says which version of the event the server holds (SPEC 2.24: stateVersion). */
+async function evCheck(d) {
+  if (appMode !== 'organiser' || !sync.authed) return;
+  if (!evSync.ready) { await evFetch({ full: true }); return; } // couldn't be read when logging in: now
+  if (String(d.epoch) !== evSync.epoch) { await evFetch({ full: true }); return; }
+  if (Number.isInteger(d.stateVersion) && d.stateVersion !== evSync.version) await evFetch();
+  if (d.othersActive === false) evAdoptLater(); // no other laptop here any more: its open card / claim is this one's
+}
+/** Just before a spin: take in what the other laptops on this draw have drawn (at most ~2.5 s). True: answered. */
+async function evBeforeSpin() {
+  if (!evOn()) return false;
+  return (await Promise.race([evFetch(), sleep(2500).then(() => false)])) === true;
+}
+/**
+ * Organiser on a draw, before the wheel turns: merge what the other laptops drew, choose the winner (crypto random,
+ * weighted) and claim them on the server. One winner at a time on a draw (R1-2): while another laptop's claim is live
+ * this laptop doesn't draw ({ busy: true }). The claim is stored like any change (it must be based on the latest
+ * version), so if two laptops press SPIN at the same moment, the one whose claim reached the server second sees the
+ * first one's claim when it merges, and stands back. Without an answer from the server it simply spins.
+ */
+async function evPrepareSpin() {
+  const fresh = await evBeforeSpin();
+  if (othersDrawing()) return { busy: true };
+  if (!fresh || evStepOpen || !evOn()) return null;
+  for (let i = 0; i < 4; i++) {
+    rebuildWheel();
+    if (!wheelEntries.length) return null;
+    const id = wheelEntries[pickWeightedIndex(wheelEntries.map(e => e.weight))].id;
+    const res = await evClaim(id);
+    if (res === 'busy') return { busy: true };
+    if (evStepOpen || !evOn()) return null;
+    if (res !== 'lost') return { id };
+  }
+  return null;
+}
+/** 'ok' (claimed on the server), 'offline' (no answer: spin anyway), 'busy' (another laptop's draw got there first) or
+    'lost' (that person was drawn meanwhile). The claim lasts as long as the spin plus the time to store it and the winner. */
+async function evClaim(id) {
+  const claimFor = (reduceMQ.matches ? 1500 : clamp(S().duration, 3, 20) * 1000) + 12000;
+  state.pend = { ...state.pend, [deviceId()]: { logId: '', redraw: false, marked: false, claim: id, claimAt: stamp(), claimFor, updatedAt: stamp() } };
+  persist();
+  broadcast();
+  const stored = await Promise.race([evPush(), sleep(5000).then(() => false)]);
+  if (othersDrawing()) return 'busy';
+  const e = findEntry(id);
+  if (!e || e.status !== 'active' || claimedElsewhere().has(id)) return 'lost';
+  return stored ? 'ok' : 'offline';
+}
+/** The spin didn't happen after all: let the other laptops draw that person again. */
+function evDropClaim() {
+  const cur = state.pend[deviceId()];
+  if (cur && cur.claim && !cur.logId) { setMyPending(null); commit(); }
+}
+/** Any change on this laptop: send it soon (a burst of edits goes as one). */
+function evChanged() {
+  if (!evOn()) return;
+  const now = Date.now();
+  if (!evSync.dirtySince) evSync.dirtySince = now;
+  clearTimeout(evSync.pushTimer);
+  evSync.pushTimer = setTimeout(evPush, now - evSync.dirtySince >= EV_PUSH_MAX_MS ? 0 : EV_PUSH_MS);
+}
+/** Send now (a winner was drawn or finished: the other laptops must know before they spin). */
+function evPushNow() { if (evOn()) { clearTimeout(evSync.pushTimer); evPush(); } }
+/** Store this laptop's event on the server if it holds anything the server's copy lacks. Resolves true once the
+    server holds everything (false: not now — it is retried). */
+function evPush() {
+  clearTimeout(evSync.pushTimer);
+  if (!evOn()) return Promise.resolve(false);
+  return evRun(async () => {
+    for (let i = 0; i < 5; i++) {
+      // Only an event that belongs to the server's current epoch is ever stored (never a stale or wiped one).
+      if (!evOn() || state.srv.id !== evSync.epoch || !evNewer(state, evSync.base)) { evSync.dirtySince = 0; return true; }
+      const sig = evSig(state); // what is being sent (later edits still count as new)
+      const t0 = Date.now();
+      // soft: a conflict comes back as 200 + ok:false (it is routine here, and browsers log every 409 as an error)
+      const r = await api('eventState', { method: 'POST', admin: true, timeout: 20000, query: { soft: 1 }, body: { epoch: evSync.epoch, baseVersion: evSync.version, state: evDoc() } });
+      if (r.ok && Number.isInteger(r.data.version)) {
+        evSync.version = r.data.version;
+        evSync.base = sig;
+        evSync.retryMs = 0;
+        evSync.tooBig = false;
+        evClock(r.data.now, t0, Date.now());
+        continue;
+      }
+      if (r.status === 401) { requireLogin(); return false; }
+      if (r.code === 'conflict' && r.data) { if (evApply(r.data) === 'later') break; continue; } // merge, try again
+      if (r.code === 'epoch') { // New event on another laptop meanwhile
+        const g = await api('eventState', { admin: true, timeout: 12000 });
+        if (g.ok) evApply(g.data);
+        return false;
+      }
+      if (r.status === 413) {
+        if (!evSync.tooBig) toast('This event is too big to back up on your server.', { type: 'error', detail: 'Everything is still on this laptop. Download the Excel file regularly.' });
+        evSync.tooBig = true;
+        return false;
+      }
+      break; // no connection or a server error: try again soon
+    }
+    evSync.retryMs = Math.min(EV_HEARTBEAT_MS, Math.max(2000, evSync.retryMs * 2));
+    clearTimeout(evSync.pushTimer);
+    evSync.pushTimer = setTimeout(evPush, evSync.retryMs);
+    return false;
+  });
+}
+/** New event on this laptop: the server's copy is empty now, in its new epoch. */
+function evStartedFresh(E, version) {
+  if (!E || version == null) { evDetach(); return; } // read again on the next check
+  evSync.epoch = E;
+  evSync.version = version;
+  evSync.base = evEmptySig('s:' + E);
+  evSync.ready = true;
+  evAdoptedCard = '';
+}
+// At least every 30 s: anything this laptop holds that isn't on the server yet goes now.
+setInterval(() => { if (evOn() && !spinning && evNewer(state, evSync.base)) evPush(); }, EV_HEARTBEAT_MS);
+
+/* ---------------------------------------------------------------------
    16. Input wiring, init & test hooks
    --------------------------------------------------------------------- */
 $('#spinBtn').addEventListener('click', () => spin());
@@ -4468,12 +5954,13 @@ $('#spinBtn').addEventListener('keydown', ev => {
 });
 wheelEl.addEventListener('click', () => {
   if (isLocked()) return;
+  if (othersDrawing()) return toast(DRAWING_ELSEWHERE_MSG);
   if (!wheelEntries.length) return toast('Add entries to start.');
   spin();
 });
 function anyModalOpen() { return winnerDialog.open || confirmDialog.open || helpDialog.open; }
 document.addEventListener('keydown', ev => {
-  if (ev.defaultPrevented || ev.ctrlKey || ev.metaKey || ev.altKey || signupOpen) return;
+  if (ev.defaultPrevented || ev.ctrlKey || ev.metaKey || ev.altKey || signupOpen || evStepOpen) return;
   if (ev.key === 'Escape' && eventMode && !anyModalOpen()) { exitEvent(); return; } // browsers usually handle Esc in full screen themselves (fullscreenchange)
   if (anyModalOpen()) return;
   const t = ev.target instanceof Element ? ev.target : document.body;
@@ -4494,8 +5981,9 @@ const unlockAudio = () => { if (appMode !== 'guest') audioContext(); };
 window.addEventListener('pointerdown', unlockAudio, { once: true, capture: true });
 window.addEventListener('keydown', unlockAudio, { once: true, capture: true });
 
-/** The wheel app itself: offline, and for the organiser once logged in on the web server. */
-function initLocal() {
+/** The wheel app itself: offline, and for the organiser once logged in on the web server (step: false — the
+    organiser first reads the draw's event from the server, then shows "Name your event" itself). */
+function initLocal({ step = true } = {}) {
   initStorage();
   bindSettings();
   applyTheme();
@@ -4509,14 +5997,12 @@ function initLocal() {
   if (location.hash === '#signup') {
     signupStandalone = true;
     openSignup();
-  } else if (!restorePendingWinner()) {
-    const seen = lsGet(GUIDE_KEY);
-    if (!seen) setTimeout(() => { if (!signupOpen && !anyModalOpen()) openHelp(); }, 250);
-  }
+  } else if (step) showEventStep(); // then: an unfinished winner card, or the first-visit guide
 }
 /** Picks the mode (SPEC 2.15 B). file:// never makes a request; on a web server api.php decides. */
 async function init() {
   if (!IS_HTTP) { initLocal(); return; }
+  migrateLegacyKeys();
   const probe = await probeApi();
   if (!probe) {
     // No api.php here (e.g. static hosting): exactly the offline app. On #wheel, a small warning says why.
@@ -4533,10 +6019,14 @@ window.MAPDraw = Object.freeze({
   getState() {
     const s = JSON.parse(JSON.stringify(state));
     return {
-      entries: s.entries, log: s.log, settings: s.settings, round: s.meta.round, pending: s.meta.pending,
+      entries: s.entries, log: s.log, settings: s.settings, round: s.meta.round, pending: appMode !== 'guest' && myPending() ? cleanPending(myPending()) : null,
       active: s.entries.filter(e => e.status === 'active'),
       wheel: wheelEntries.map(e => e.id), spinning, winnerOpen, eventMode, signupOpen, storage: storageOK,
-      mode: appMode, phoneSync: { state: appMode === 'organiser' ? pillState() : null, epoch: sync.epoch, since: sync.since }
+      mode: appMode, phoneSync: { state: appMode === 'organiser' ? pillState() : null, epoch: sync.epoch, since: sync.since },
+      event: { name: s.ev.name, date: s.ev.date }, eventStep: evStepOpen, slot: PAGE_SLOT ? PAGE_SLOT.name : null,
+      guestTarget: appMode === 'guest' ? (guestTarget ? guestTarget.name : null) : undefined,
+      server: appMode === 'organiser' ? { ready: evSync.ready, epoch: evSync.epoch, version: evSync.version, bound: state.srv.id } : null,
+      hold: evStepOpen && evHold ? { name: evHold.name, others: !!evHold.others, joined: !!evHold.joined } : null
     };
   },
   pickWeightedIndex,

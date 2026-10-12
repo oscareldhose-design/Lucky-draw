@@ -13,6 +13,12 @@
  * - Sign-ups are kept in the "data" folder next to this file, which is created automatically.
  *   "Clear all sign-ups on the server" (in the wheel's Settings) wipes them. Deleting the folder
  *   does the same.
+ * - Up to ten events at once: upload the same two files into the folders draw, draw2 … draw10.
+ *   Each folder is a separate draw (its own sign-ups, Excel backup, login and password). Guests
+ *   all use the first folder's address; the page sends them to the event that is running.
+ * - The organiser's laptop also keeps a backup of its whole event here (the wheel, winners, round,
+ *   prize, event name), so another laptop can take over if one dies, and two laptops on the same
+ *   draw stay in step. "New event" in the wheel deletes it together with the sign-ups.
  *
  * Use HTTPS so that guests' details are encrypted on their way to your server.
  */
@@ -31,6 +37,7 @@ const CLIENT_IP_HEADER = '';         // only behind a proxy/CDN, e.g. 'HTTP_CF_C
 /* ---- Internal constants ---------------------------------------------------------------------- */
 const MLD_VERSION = 1;
 const MLD_MAX_BODY = 8192;           // bytes
+const MLD_EVENT_MAX_BODY = 2097152;  // bytes: the organiser's whole event (only for action=eventState, organiser only)
 const MLD_PAGE_SIZE = 1000;          // entries per page for the organiser's laptop
 const MLD_TRIM = " \t\n\r\0\x0B";   // trim()'s classic default, spelled out (PHP 8.6 adds \f)
 // First line of every storage file: if the web server ever runs one of them as PHP, it answers
@@ -43,9 +50,19 @@ const MLD_DEFAULT_CONFIG = [
     'consentText' => 'I agree that MAP may store my details to run this draw and contact me if I win.',
     'marketingText' => 'Keep me updated with news and offers from MAP.',
     'showMarketing' => true,
+    'eventName' => '', // e.g. "Newcastle": guests choose their event by it; it names the Excel files
+    'eventDate' => '', // DD-MM-YYYY, the day the event was named (part of the Excel backup's file name)
 ];
 // Same length limits as the app's settings.
 const MLD_TEXT_LIMITS = ['title' => 60, 'subtitle' => 80, 'consentText' => 400, 'marketingText' => 200];
+const MLD_EVENT_NAME_MAX = 60;
+// "In use": a draw counts as running while a logged-in laptop has checked for sign-ups within this many seconds.
+const MLD_ACTIVE_SECONDS = 90;
+const MLD_ACTIVE_WRITE_EVERY = 15;   // a laptop's "last seen" time is saved at most this often
+const MLD_ACTIVE_KEEP = 600;         // records older than this are dropped
+const MLD_ACTIVE_LAST = '~last';     // in active.php: when any organiser last checked in (kept after the records go)
+// The draw folders that can sit side by side (the same list as DRAW_SLOTS in index.html).
+const MLD_DRAW_FOLDERS = ['draw', 'draw2', 'draw3', 'draw4', 'draw5', 'draw6', 'draw7', 'draw8', 'draw9', 'draw10'];
 // JavaScript's \s (what the app collapses to a single space), for PCRE with the u flag.
 const MLD_WS = ' \t\n\x0B\f\r\x{00A0}\x{1680}\x{2000}-\x{200A}\x{2028}\x{2029}\x{202F}\x{205F}\x{3000}\x{FEFF}';
 // The app's EMAIL_RE, ported to PCRE (D = "$" means the very end of the string).
@@ -126,6 +143,11 @@ register_shutdown_function(function () {
 /** Sends the JSON answer and stops. */
 function mld_send($status, array $data, array $headers = [])
 {
+    // &soft=1 on submit / login (the app's own pages): an ordinary refusal (wrong password, already entered, closed,
+    // full, a field to correct) comes with HTTP 200 and ok:false, so the browser doesn't log it as an error.
+    if (!empty($GLOBALS['mld_soft']) && isset($data['ok']) && $data['ok'] === false && in_array($status, [400, 401, 403, 409], true)) {
+        $status = 200;
+    }
     while (ob_get_level() > 0) {
         ob_end_clean();
     }
@@ -176,14 +198,18 @@ function mld_main()
         'clear' => ['POST', 'mld_action_clear'],
         'exportXlsx' => ['GET', 'mld_action_export_xlsx'],
         'setWinners' => ['POST', 'mld_action_set_winners'],
+        'eventState' => [['GET', 'POST'], 'mld_action_event_state'],
     ];
     if (!isset($routes[$action])) {
         mld_fail(404, 'not_found', 'Unknown action.');
     }
     $method = isset($_SERVER['REQUEST_METHOD']) ? strtoupper((string) $_SERVER['REQUEST_METHOD']) : 'GET';
-    $want = $routes[$action][0];
-    if ($method !== $want && !($want === 'GET' && $method === 'HEAD')) {
-        mld_fail(405, 'method_not_allowed', 'Use ' . $want . ' for this action.', null, [], ['Allow: ' . $want]);
+    $want = (array) $routes[$action][0];
+    if ($method === 'HEAD' && in_array('GET', $want, true)) {
+        $method = 'GET';
+    }
+    if (!in_array($method, $want, true)) {
+        mld_fail(405, 'method_not_allowed', 'Use ' . implode(' or ', $want) . ' for this action.', null, [], ['Allow: ' . implode(', ', $want)]);
     }
     call_user_func($routes[$action][1]);
 }
@@ -215,12 +241,43 @@ function mld_public_config(array $state)
         'marketingText' => $c['marketingText'],
         'showMarketing' => $c['showMarketing'],
         'event' => $state['epoch'], // changes on "New event", so guests' phones forget the last event
-    ];
+        'eventName' => $c['eventName'],
+        // A yes/no only (no counts, no ids): is an organiser's laptop running this draw right now?
+        'organiserActive' => mld_active_any(),
+        // Does this draw still hold an event (a laptop's event backup or sign-ups since the last "New event")? Yes/no.
+        'hasEvent' => !empty($state['evHas']) || $state['count'] > 0,
+        // Seconds since an organiser's laptop last checked in, rounded to the minute (null: never).
+        'lastActiveAgo' => mld_active_ago(),
+    ] + mld_draw_folders();
 }
 
-/** POST submit: { clientId, name, number, email, consent:true, marketing }. */
+/**
+ * ['drawFolders' => [...]]: which draw folders (draw, draw2 … draw10) are uploaded next to this one, so pages only
+ * ask those (no requests for folders that don't exist). Empty when this folder isn't one of them, or when it can't
+ * be told reliably from here (the page then simply asks every draw folder).
+ */
+function mld_draw_folders()
+{
+    $own = basename(__DIR__);
+    $script = isset($_SERVER['SCRIPT_NAME']) && is_string($_SERVER['SCRIPT_NAME']) ? $_SERVER['SCRIPT_NAME'] : '';
+    // The folder in the address must be this folder on disk, and the folder above it must be readable.
+    if (!in_array($own, MLD_DRAW_FOLDERS, true) || basename(str_replace('\\', '/', dirname($script))) !== $own
+        || @scandir(dirname(__DIR__)) === false) {
+        return [];
+    }
+    $out = [];
+    foreach (MLD_DRAW_FOLDERS as $name) {
+        if ($name === $own || @is_file(dirname(__DIR__) . '/' . $name . '/api.php')) {
+            $out[] = $name;
+        }
+    }
+    return ['drawFolders' => $out];
+}
+
+/** POST submit: { clientId, name, number, email, consent:true, adult:true, marketing }. */
 function mld_action_submit()
 {
+    $GLOBALS['mld_soft'] = isset($_GET['soft']) && $_GET['soft'] === '1';
     $wait = mld_limit_hit('submit', SUBMIT_LIMIT_PER_MINUTE, 60);
     if ($wait > 0) {
         mld_fail(429, 'rate_limited', 'Too many attempts — please wait a minute and try again.', null, [], ['Retry-After: ' . $wait]);
@@ -282,6 +339,7 @@ function mld_action_submit()
             'consent' => true,
             'consentAt' => $now,
             'marketing' => $v['marketing'],
+            'adult' => true, // confirmed "I am aged 18 or over"
         ];
         mld_entries_append($entry, $raw);
         $state['seq'] = $seq;
@@ -294,7 +352,7 @@ function mld_action_submit()
     mld_send($result[0], $result[1]);
 }
 
-/** The same rules as the app's form: all three fields are required; consent must be ticked. */
+/** The same rules as the app's form: all three fields are required; consent and "18 or over" must be ticked. */
 function mld_validate_submission(array $b)
 {
     $errors = [];
@@ -319,6 +377,9 @@ function mld_validate_submission(array $b)
     }
     if (!array_key_exists('consent', $b) || $b['consent'] !== true) {
         $errors['consent'] = 'You must tick “I agree” to enter the draw.';
+    }
+    if (!array_key_exists('adult', $b) || $b['adult'] !== true) {
+        $errors['adult'] = 'You must be 18 or over to enter the draw.';
     }
     $clientId = isset($b['clientId']) ? $b['clientId'] : null;
     if (!is_string($clientId) || !preg_match('/^[A-Za-z0-9_-]{8,64}$/D', $clientId)) {
@@ -357,6 +418,7 @@ function mld_field(array $b, $key)
 /** POST login: { password } */
 function mld_action_login()
 {
+    $GLOBALS['mld_soft'] = isset($_GET['soft']) && $_GET['soft'] === '1';
     mld_require_csrf();
     if (!mld_password_is_set()) {
         mld_fail(503, 'password_not_set', 'Open api.php and set ADMIN_PASSWORD first.');
@@ -408,8 +470,12 @@ function mld_action_login()
         'mld_at' => time(),
         'mld_fp' => mld_fingerprint(),
     ];
+    $sid = session_id();
     session_write_close();
     mld_session_cleanup();
+    // A laptop that has just logged in counts as using this draw straight away, so a second laptop logging in
+    // at the same moment is told (see action=session, othersActive).
+    mld_active_touch(is_string($sid) ? $sid : '', true);
     mld_send(200, ['ok' => true]);
 }
 
@@ -418,33 +484,50 @@ function mld_action_logout()
 {
     mld_require_csrf();
     if (isset($_COOKIE['mld_session']) && is_string($_COOKIE['mld_session']) && $_COOKIE['mld_session'] !== '') {
-        mld_session_setup();
-        if (@session_start() === true) {
+        mld_active_forget($_COOKIE['mld_session']); // this laptop no longer counts as running the draw
+        if (mld_session_known($_COOKIE['mld_session']) && @session_start() === true) {
             $_SESSION = [];
             @session_destroy();
         }
     }
-    setcookie('mld_session', '', [
-        'expires' => 1,
-        'path' => '/',
-        'secure' => mld_is_https(),
-        'httponly' => true,
-        'samesite' => 'Strict',
-    ]);
+    $paths = [mld_cookie_path()];
+    if ($paths[0] !== '/') {
+        $paths[] = '/'; // a log-in cookie from before each draw folder had its own
+    }
+    foreach ($paths as $path) {
+        setcookie('mld_session', '', [
+            'expires' => 1,
+            'path' => $path,
+            'secure' => mld_is_https(),
+            'httponly' => true,
+            'samesite' => 'Strict',
+        ]);
+    }
     mld_send(200, ['ok' => true]);
 }
 
-/** GET session: { ok } when logged in, else 401. */
+/**
+ * GET session: { ok, othersActive } when logged in, else 401 (with &soft=1: 200 { ok:false, code:"unauthorised" }). othersActive: another logged-in laptop (not this one)
+ * has used this draw in the last MLD_ACTIVE_SECONDS seconds.
+ */
 function mld_action_session()
 {
+    // &soft=1 (a page checking whether its stored log-in is still valid): "not logged in" is an ordinary answer then,
+    // 200 + ok:false, so the browser doesn't log an expired log-in as an error.
+    if (isset($_GET['soft']) && $_GET['soft'] === '1' && (!mld_password_is_set() || !mld_is_admin())) {
+        mld_send(200, ['ok' => false, 'code' => 'unauthorised', 'message' => 'Please log in.']);
+    }
     mld_require_admin();
-    mld_send(200, ['ok' => true]);
+    $sid = isset($_COOKIE['mld_session']) && is_string($_COOKIE['mld_session']) ? $_COOKIE['mld_session'] : '';
+    mld_send(200, ['ok' => true, 'othersActive' => mld_active_any($sid === '' ? null : mld_active_key($sid))]);
 }
 
 /** GET entries&since=<seq>: sign-ups after that sequence number, oldest first, at most 1000. */
 function mld_action_entries()
 {
     mld_require_admin();
+    mld_active_touch(); // the laptop checks every few seconds: this draw is in use
+    $sid = isset($_COOKIE['mld_session']) && is_string($_COOKIE['mld_session']) ? $_COOKIE['mld_session'] : '';
     $since = isset($_GET['since']) ? $_GET['since'] : '';
     if (!is_string($since) || ($since !== '' && !preg_match('/^[0-9]{1,15}$/D', $since))) {
         mld_fail(400, 'invalid', 'since must be a whole number.', 'since');
@@ -483,6 +566,7 @@ function mld_action_entries()
             'consent' => !empty($r['consent']),
             'consentAt' => mld_str($r, 'consentAt'),
             'marketing' => !empty($r['marketing']),
+            'adult' => !empty($r['adult']),
         ];
     }
     mld_send(200, [
@@ -492,6 +576,13 @@ function mld_action_entries()
         'next' => $out ? $out[count($out) - 1]['seq'] : $since,
         'total' => count($rows),
         'more' => $more,
+        'stateVersion' => $state['evVersion'], // the event backup changed (another laptop): fetch action=eventState
+        'epochFrom' => $state['epochFrom'],
+        'eventId' => $state['eventId'],
+        // Is another laptop on this draw right now? (A winner card that a laptop which went away left open is then
+        // finished by one that is still here.)
+        'othersActive' => mld_active_any($sid === '' ? null : mld_active_key($sid)),
+        'now' => mld_now_ms(),
     ]);
 }
 
@@ -505,14 +596,26 @@ function mld_action_set_config()
     mld_config_apply(MLD_DEFAULT_CONFIG, $b, true);
     $state = mld_locked(true, function () use ($b) {
         $state = mld_state_read();
-        $state['config'] = mld_config_apply($state['config'], $b, true);
+        $c = mld_config_apply($state['config'], $b, true);
+        // The event's date goes with its name: cleared with it, and today's date if the laptop didn't send one.
+        if ($c['eventName'] === '') {
+            $c['eventDate'] = '';
+        } elseif ($c['eventDate'] === '') {
+            $c['eventDate'] = date('d-m-Y');
+        }
+        $state['config'] = $c;
         mld_state_write($state);
         return $state;
     });
     mld_send(200, ['ok' => true, 'config' => mld_public_config($state)]);
 }
 
-/** POST clear: { confirm:"DELETE" } deletes every sign-up and starts a new epoch. */
+/**
+ * POST clear: { confirm:"DELETE" } — "New event": deletes every sign-up, the Excel backup and the laptops' event
+ * backup, and starts a new epoch (every laptop on this draw then starts the new event too).
+ * { confirm:"DELETE", keepEvent:true } — "Clear all sign-ups on the server": only the sign-ups and the Excel backup
+ * go; the laptops' event backup (their wheel) is kept.
+ */
 function mld_action_clear()
 {
     mld_require_csrf();
@@ -521,18 +624,40 @@ function mld_action_clear()
     if (!isset($b['confirm']) || $b['confirm'] !== 'DELETE') {
         mld_fail(400, 'invalid', 'Type DELETE to confirm.', 'confirm');
     }
-    $epoch = mld_locked(true, function () {
+    $keep = isset($b['keepEvent']) && $b['keepEvent'] === true;
+    $state = mld_locked(true, function () use ($keep) {
         $state = mld_state_read();
+        $ev = $keep ? mld_event_read() : null;
+        if ($ev !== null && $ev['epoch'] !== $state['epoch']) {
+            $ev = null;
+        }
         $state['epoch'] = bin2hex(random_bytes(8));
         $state['epochAt'] = mld_now_iso();
+        $state['epochFrom'] = $keep ? 'signups' : 'newEvent';
+        if (!$keep) {
+            $state['eventId'] = bin2hex(random_bytes(8)); // a new event: a laptop still holding the old one never merges it in
+        }
         $state['count'] = 0;
-        $state['winners'] = ['phones' => [], 'emails' => []];
+        $state['evVersion']++;           // laptops notice the change (it keeps counting up, never reused)
+        if ($ev !== null) {
+            mld_event_write($state['epoch'], $state['evVersion'], $ev['json']);
+            $state['winners'] = mld_winners_from_event(json_decode($ev['json'], false, 64));
+        } else {
+            @unlink(mld_path('event-state.php'));
+            $state['evHas'] = false;
+            $state['winners'] = ['phones' => [], 'emails' => []];
+        }
+        if (!$keep) {
+            $state['config']['eventName'] = ''; // the next event gets its own name (and Excel file name)
+            $state['config']['eventDate'] = '';
+        }
         mld_state_write($state);         // seq keeps counting up, so old numbers are never reused
         mld_write_atomic(mld_path('entries.php'), MLD_GUARD . "\n");
         mld_backup_write([], $state['winners']);
-        return $state['epoch'];
+        return $state;
     });
-    mld_send(200, ['ok' => true, 'epoch' => $epoch]);
+    mld_send(200, ['ok' => true, 'epoch' => $state['epoch'], 'version' => $state['evVersion'], 'epochFrom' => $state['epochFrom'],
+        'eventId' => $state['eventId']]);
 }
 
 /**
@@ -565,12 +690,236 @@ function mld_action_set_winners()
     $w = mld_winners_clean($w);
     mld_locked(true, function () use ($w) {
         $state = mld_state_read();
+        // Never removes a mark another laptop's event backup holds: the backup's winners are always included.
+        $ev = mld_event_read();
+        if ($ev !== null && $ev['epoch'] === $state['epoch']) {
+            $w = mld_winners_union($w, mld_winners_from_event(json_decode($ev['json'], false, 64)));
+        }
         $state['winners'] = $w;
         mld_state_write($state);
         $raw = '';
         mld_backup_write(mld_entries_read($raw), $w);
     });
     mld_send(200, ['ok' => true]);
+}
+
+/* ---- The laptops' event backup (data/event-state.php) ------------------------------------------- *
+ * The organiser's laptop stores its whole event for this draw here (everyone on the wheel, including people
+ * typed in by hand, the winner log, the round, the prize, the event's name). Another laptop that logs in to this
+ * draw restores it, and every laptop on the draw stays in step through it: each store must name the version it
+ * was based on, so two laptops never overwrite each other (the second one merges and stores again).            */
+
+/**
+ * GET eventState (organiser only): { ok, epoch, version, state } — state is the last event stored for the current
+ * epoch (null if none). With &have=<version> and nothing new: { ok, epoch, version, unchanged:true } (no state).
+ * POST eventState (organiser only) { epoch, baseVersion, state }: stored when epoch is the current epoch and
+ * baseVersion is the current version → { ok, version }; else 409 { code:"conflict", epoch, version, state } or
+ * 409 { code:"epoch", epoch } ("New event" cleared the draw meanwhile). With &soft=1 those two answers come with
+ * HTTP 200 instead (still ok:false): two laptops on one draw meet them all the time, and browsers log every 409.
+ */
+function mld_action_event_state()
+{
+    $post = isset($_SERVER['REQUEST_METHOD']) && strtoupper((string) $_SERVER['REQUEST_METHOD']) === 'POST';
+    if ($post) {
+        mld_require_csrf();
+    }
+    mld_require_admin();
+    mld_active_touch();
+    if (!$post) {
+        $have = isset($_GET['have']) ? $_GET['have'] : '';
+        if (!is_string($have) || ($have !== '' && !preg_match('/^[0-9]{1,15}$/D', $have))) {
+            mld_fail(400, 'invalid', 'have must be a whole number.', 'have');
+        }
+        $got = mld_locked(false, function () {
+            return [mld_state_read(), mld_event_read()];
+        });
+        $state = $got[0];
+        $sid = isset($_COOKIE['mld_session']) && is_string($_COOKIE['mld_session']) ? $_COOKIE['mld_session'] : '';
+        // othersActive: is another laptop on this draw right now (then a winner card it left open stays its own)?
+        // othersAgo: seconds since another laptop last checked in (only within the last 10 minutes; else null).
+        $me = $sid === '' ? null : mld_active_key($sid);
+        $head = mld_event_head($state) + ['othersActive' => mld_active_any($me), 'othersAgo' => mld_active_others_ago($me)];
+        if ($have !== '' && (int) $have === $state['evVersion']) {
+            mld_send(200, $head + ['unchanged' => true]);
+        }
+        $ev = $got[1];
+        mld_send_with_state(200, $head, $ev !== null && $ev['epoch'] === $state['epoch'] ? $ev['json'] : null);
+    }
+
+    $b = mld_json_body(MLD_EVENT_MAX_BODY, false);
+    $epoch = isset($b->epoch) ? $b->epoch : null;
+    $base = isset($b->baseVersion) ? $b->baseVersion : null;
+    $doc = isset($b->state) ? $b->state : null;
+    if (!is_string($epoch) || $epoch === '' || strlen($epoch) > 64) {
+        mld_fail(400, 'invalid', 'epoch must be text.', 'epoch');
+    }
+    if (!is_int($base) || $base < 0) {
+        mld_fail(400, 'invalid', 'baseVersion must be a whole number.', 'baseVersion');
+    }
+    if (!is_object($doc)) {
+        mld_fail(400, 'invalid', 'state must be an object.', 'state');
+    }
+    $json = json_encode($doc, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE);
+    if (!is_string($json) || strlen($json) > MLD_EVENT_MAX_BODY) {
+        mld_fail(413, 'too_large', 'The event is too large to back up on the server.');
+    }
+    $winners = mld_winners_from_event($doc);
+    $has = mld_event_has_content($doc);
+    $result = mld_locked(true, function () use ($epoch, $base, $json, $winners, $has) {
+        $state = mld_state_read();
+        if ($epoch !== $state['epoch']) {
+            return ['epoch', $state, null];
+        }
+        if ($base !== $state['evVersion']) {
+            $ev = mld_event_read();
+            return ['conflict', $state, $ev !== null && $ev['epoch'] === $state['epoch'] ? $ev['json'] : null];
+        }
+        $state['evVersion']++;
+        $state['evHas'] = $has;
+        mld_event_write($state['epoch'], $state['evVersion'], $json);
+        $changed = $winners !== $state['winners'];
+        $state['winners'] = $winners;
+        mld_state_write($state);
+        if ($changed) { // the Excel backup's Winner column follows the event (whichever laptop drew them)
+            $raw = '';
+            mld_backup_write(mld_entries_read($raw), $winners);
+        }
+        return ['ok', $state, null];
+    });
+    $state = $result[1];
+    $status = isset($_GET['soft']) && $_GET['soft'] === '1' ? 200 : 409;
+    if ($result[0] === 'epoch') {
+        mld_send($status, ['ok' => false, 'code' => 'epoch', 'message' => 'This draw was started afresh (New event) on another laptop.']
+            + mld_event_head($state));
+    }
+    if ($result[0] === 'conflict') {
+        mld_send_with_state($status, ['ok' => false, 'code' => 'conflict', 'message' => 'Another laptop saved this event first.']
+            + mld_event_head($state), $result[2]);
+    }
+    mld_send(200, ['ok' => true, 'epoch' => $state['epoch'], 'version' => $state['evVersion'], 'now' => mld_now_ms()]);
+}
+
+/** The small part of an event answer: the epoch and version, why the epoch began, which event the draw holds (eventId:
+    new on "New event", kept when only the sign-ups are cleared), the number of sign-ups. */
+function mld_event_head(array $state)
+{
+    return [
+        'ok' => true,
+        'epoch' => $state['epoch'],
+        'version' => $state['evVersion'],
+        'epochFrom' => $state['epochFrom'],
+        'eventId' => $state['eventId'],
+        'signups' => $state['count'],
+        'now' => mld_now_ms(),
+    ];
+}
+
+/** Sends $data plus "state": the stored event's JSON as it is (never decoded and encoded again), or null. */
+function mld_send_with_state($status, array $data, $json)
+{
+    $head = json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE);
+    if (!is_string($head) || substr($head, -1) !== '}') {
+        mld_fail(500, 'server', 'Something went wrong on the server. Please try again.');
+    }
+    while (ob_get_level() > 0) {
+        ob_end_clean();
+    }
+    if (!headers_sent()) {
+        http_response_code($status);
+    }
+    $GLOBALS['mld_sent'] = true;
+    echo substr($head, 0, -1) . ',"state":' . (is_string($json) && $json !== '' ? $json : 'null') . '}';
+    exit;
+}
+
+/** The stored event backup: ['epoch', 'version', 'json'] or null. Call with the data lock held. */
+function mld_event_read()
+{
+    $raw = @file_get_contents(mld_path('event-state.php'));
+    if (!is_string($raw) || strncmp($raw, MLD_GUARD . "\n", strlen(MLD_GUARD) + 1) !== 0) {
+        return null;
+    }
+    $rest = substr($raw, strlen(MLD_GUARD) + 1);
+    $nl = strpos($rest, "\n");
+    if ($nl === false) {
+        return null;
+    }
+    $head = json_decode(substr($rest, 0, $nl), true);
+    $json = rtrim(substr($rest, $nl + 1), "\r\n");
+    if (!is_array($head) || !isset($head['epoch'], $head['version']) || !is_string($head['epoch'])
+        || !is_int($head['version']) || $json === '' || $json[0] !== '{') {
+        return null;
+    }
+    return ['epoch' => $head['epoch'], 'version' => $head['version'], 'json' => $json];
+}
+
+/** Stores the event backup (guard line, a small header line, the event's JSON). Call with the exclusive lock held. */
+function mld_event_write($epoch, $version, $json)
+{
+    $head = json_encode(['epoch' => $epoch, 'version' => $version, 'at' => mld_now_iso()], JSON_UNESCAPED_SLASHES);
+    mld_write_atomic(mld_path('event-state.php'), MLD_GUARD . "\n" . $head . "\n" . $json . "\n");
+}
+
+/** Does the laptop's event hold anything (people, winners, or a name)? */
+function mld_event_has_content($doc)
+{
+    if (!is_object($doc)) {
+        return false;
+    }
+    if ((isset($doc->entries) && is_array($doc->entries) && $doc->entries)
+        || (isset($doc->log) && is_array($doc->log) && $doc->log)) {
+        return true;
+    }
+    return isset($doc->ev) && is_object($doc->ev) && isset($doc->ev->name) && is_string($doc->ev->name)
+        && trim($doc->ev->name) !== '';
+}
+
+/**
+ * Who has won in a laptop's event: every "Winner" record in its winner log (not No-shows), by the phone number and
+ * email on the record and on that person's entry. The server's Excel backup marks them "Winner".
+ */
+function mld_winners_from_event($doc)
+{
+    $w = ['phones' => [], 'emails' => []];
+    if (!is_object($doc) || !isset($doc->log) || !is_array($doc->log)) {
+        return $w;
+    }
+    $byId = [];
+    if (isset($doc->entries) && is_array($doc->entries)) {
+        foreach ($doc->entries as $e) {
+            if (is_object($e) && isset($e->id) && is_string($e->id)) {
+                $byId[$e->id] = $e;
+            }
+        }
+    }
+    $add = function ($rec) use (&$w) {
+        $p = mld_norm_phone(isset($rec->number) && is_string($rec->number) ? mld_cut($rec->number, 64) : '');
+        $e = mld_norm_email(isset($rec->email) && is_string($rec->email) ? mld_cut($rec->email, 254) : '');
+        if ($p !== '') {
+            $w['phones'][$p] = true;
+        }
+        if ($e !== '') {
+            $w['emails'][$e] = true;
+        }
+    };
+    foreach ($doc->log as $r) {
+        if (!is_object($r) || !isset($r->type) || $r->type !== 'Winner') {
+            continue;
+        }
+        $add($r);
+        if (isset($r->entryId) && is_string($r->entryId) && isset($byId[$r->entryId])) {
+            $add($byId[$r->entryId]);
+        }
+    }
+    return mld_winners_clean(['phones' => array_keys($w['phones']), 'emails' => array_keys($w['emails'])]);
+}
+
+function mld_winners_union(array $a, array $b)
+{
+    return mld_winners_clean([
+        'phones' => array_values(array_unique(array_merge($a['phones'], $b['phones']))),
+        'emails' => array_values(array_unique(array_merge($a['emails'], $b['emails']))),
+    ]);
 }
 
 /* ---- Excel backup ------------------------------------------------------------------------------- */
@@ -583,9 +932,10 @@ function mld_action_set_winners()
 function mld_action_export_xlsx()
 {
     mld_require_admin();
-    $bytes = mld_locked(false, function () {
-        return mld_backup_read();
+    $got = mld_locked(false, function () {
+        return [mld_backup_read(), mld_state_read()['config']];
     });
+    $bytes = $got[0];
     if ($bytes === null) { // missing or damaged: rebuild it from the sign-ups
         $bytes = mld_locked(true, function () {
             $raw = '';
@@ -593,11 +943,13 @@ function mld_action_export_xlsx()
             return mld_backup_write($rows, mld_state_read()['winners']);
         });
     }
+    // "<Event name> <DD-MM-YYYY> (server backup).xlsx", e.g. "Newcastle 10-10-2026 (server backup).xlsx"
+    $name = mld_file_stem($got[1]) . ' (server backup).xlsx';
     if (!headers_sent()) {
         header_remove('X-Powered-By');
         http_response_code(200);
         header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        header('Content-Disposition: attachment; filename="map-lucky-draw-sign-ups-' . gmdate('Y-m-d') . '.xlsx"');
+        header('Content-Disposition: ' . mld_content_disposition($name));
         header('Content-Length: ' . strlen($bytes));
         header('X-Content-Type-Options: nosniff');
         header('Cache-Control: no-store');
@@ -606,6 +958,32 @@ function mld_action_export_xlsx()
     }
     echo $bytes;
     exit;
+}
+
+/**
+ * "<Event name> <DD-MM-YYYY>", safe as a file name (the same rule as the app): \ / : * ? " < > | and control
+ * characters removed, spaces collapsed, at most 80 characters; "Lucky Draw" when there is no name yet.
+ */
+function mld_file_stem(array $config)
+{
+    $name = isset($config['eventName']) && is_string($config['eventName']) ? $config['eventName'] : '';
+    $name = (string) preg_replace('/[\\\\\/:*?"<>|\x{0000}-\x{001F}\x{007F}-\x{009F}\x{FFFE}\x{FFFF}]/u', '', $name);
+    $name = trim((string) preg_replace('/[' . MLD_WS . ']+/u', ' ', $name), ' ');
+    $name = trim(mld_cut(ltrim($name, '. '), 80), ' ');
+    if ($name === '') {
+        $name = 'Lucky Draw';
+    }
+    $date = isset($config['eventDate']) && is_string($config['eventDate'])
+        && preg_match('/^[0-9]{2}-[0-9]{2}-[0-9]{4}$/D', $config['eventDate']) ? $config['eventDate'] : date('d-m-Y');
+    return $name . ' ' . $date;
+}
+
+/** RFC 6266: the UTF-8 name in filename*, and a plain-ASCII copy in filename for older browsers. */
+function mld_content_disposition($name)
+{
+    $ascii = (string) preg_replace('/[^\x20-\x7E]/u', '_', $name);
+    $ascii = str_replace(['"', '\\', '%'], '_', $ascii);
+    return 'attachment; filename="' . $ascii . '"; filename*=UTF-8\'\'' . rawurlencode($name);
 }
 
 /** The stored backup's bytes, or null when it is missing or damaged. Call with a lock held. */
@@ -742,19 +1120,37 @@ function mld_require_admin()
 
 function mld_is_admin()
 {
-    if (!isset($_COOKIE['mld_session']) || !is_string($_COOKIE['mld_session']) || $_COOKIE['mld_session'] === '') {
-        return false; // no cookie: never create a session for anonymous visitors
+    static $known = null; // asked once per request (a second session_start would send the cookie again)
+    if ($known !== null) {
+        return $known;
     }
-    mld_session_setup();
+    $known = false;
+    if (!isset($_COOKIE['mld_session']) || !mld_session_known($_COOKIE['mld_session'])) {
+        return false; // no cookie, or one this server never issued: never create a session for anonymous visitors
+    }
     if (@session_start(['read_and_close' => true]) !== true) {
         return false;
     }
     $s = isset($_SESSION) && is_array($_SESSION) ? $_SESSION : [];
     $_SESSION = [];
-    return !empty($s['mld_admin'])
+    $known = !empty($s['mld_admin'])
         && isset($s['mld_at'], $s['mld_fp']) && is_string($s['mld_fp'])
         && time() - (int) $s['mld_at'] < SESSION_HOURS * 3600
         && hash_equals(mld_fingerprint(), $s['mld_fp']);
+    return $known;
+}
+
+/**
+ * Is $id a log-in session this server issued (its session file exists)? Checked before any session is started, so a
+ * made-up or expired cookie never creates a session file or gets a new cookie back. Also sets up the session.
+ */
+function mld_session_known($id)
+{
+    if (!is_string($id) || !preg_match('/^[A-Za-z0-9,-]{22,256}$/D', $id)) {
+        return false;
+    }
+    mld_session_setup();
+    return is_file(mld_path('sessions') . '/sess_' . $id);
 }
 
 /** Changes whenever ADMIN_PASSWORD changes, so a new password logs every laptop out. */
@@ -803,12 +1199,134 @@ function mld_session_setup()
     session_cache_limiter(''); // keep our Cache-Control: no-store
     session_set_cookie_params([
         'lifetime' => SESSION_HOURS * 3600,
-        'path' => '/',
+        'path' => mld_cookie_path(), // this folder only: logging in to /draw2/ never replaces the /draw/ login
         'domain' => '',
         'secure' => mld_is_https(),
         'httponly' => true,
         'samesite' => 'Strict',
     ]);
+}
+
+/** This folder's address path, e.g. "/draw2/": the log-in cookie belongs to this folder only. */
+function mld_cookie_path()
+{
+    $script = isset($_SERVER['SCRIPT_NAME']) && is_string($_SERVER['SCRIPT_NAME']) ? $_SERVER['SCRIPT_NAME'] : '';
+    $dir = str_replace('\\', '/', dirname($script));
+    if ($dir === '' || $dir[0] !== '/') {
+        return '/';
+    }
+    $dir = rtrim($dir, '/') . '/';
+    // Only characters that are safe in a cookie's Path (never ";" or ","); anything else: the whole site.
+    return preg_match('#^/[A-Za-z0-9._~!$&\'()*+=@%/-]*$#D', $dir) ? $dir : '/';
+}
+
+/* ---- "In use": which logged-in laptops are running this draw (data/active.php) ----------------- *
+ * One record per log-in session, keyed by a keyed hash of its session id (never the id itself), holding
+ * only the time that laptop last checked for sign-ups. The public config turns this into a yes/no.  */
+
+function mld_active_key($sid)
+{
+    $state = mld_state();
+    return substr(hash_hmac('sha256', 'active:' . (string) $sid, $state['secret']), 0, 32);
+}
+
+/**
+ * Called on every organiser poll (and at log-in, with that new session's id); writes at most every
+ * MLD_ACTIVE_WRITE_EVERY seconds per session unless $force.
+ */
+function mld_active_touch($sid = null, $force = false)
+{
+    if ($sid === null) {
+        $sid = isset($_COOKIE['mld_session']) && is_string($_COOKIE['mld_session']) ? $_COOKIE['mld_session'] : '';
+    }
+    if (!is_string($sid) || $sid === '') {
+        return;
+    }
+    $key = mld_active_key($sid);
+    $now = time();
+    $list = mld_guarded_read('active.php');
+    if (!$force && isset($list[$key]) && is_int($list[$key]) && $list[$key] <= $now && $now - $list[$key] < MLD_ACTIVE_WRITE_EVERY) {
+        return;
+    }
+    mld_guarded_update('active.php', function (array &$list) use ($key, $now) {
+        $list = mld_active_clean($list, $now);
+        $list[$key] = $now;
+        $list[MLD_ACTIVE_LAST] = $now;
+    });
+}
+
+/** Logging out: this session no longer keeps the draw "in use". */
+function mld_active_forget($sid)
+{
+    $key = mld_active_key($sid);
+    if (!array_key_exists($key, mld_guarded_read('active.php'))) {
+        return;
+    }
+    mld_guarded_update('active.php', function (array &$list) use ($key) {
+        $list = mld_active_clean($list, time());
+        unset($list[$key]);
+    });
+}
+
+/**
+ * True when any logged-in laptop checked for sign-ups in the last MLD_ACTIVE_SECONDS seconds ($exceptKey: not
+ * counting that session, e.g. the laptop that asks).
+ */
+function mld_active_any($exceptKey = null)
+{
+    $now = time();
+    foreach (mld_guarded_read('active.php') as $k => $t) {
+        if ($k === MLD_ACTIVE_LAST || $k === $exceptKey) {
+            continue;
+        }
+        if (is_int($t) && $t <= $now + 5 && $now - $t <= MLD_ACTIVE_SECONDS) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/** Seconds since another laptop (not $exceptKey) last checked in, while its record is kept (10 min); else null. */
+function mld_active_others_ago($exceptKey)
+{
+    $now = time();
+    $best = null;
+    foreach (mld_guarded_read('active.php') as $k => $t) {
+        if ($k !== MLD_ACTIVE_LAST && $k !== $exceptKey && is_int($t) && $t <= $now + 5 && ($best === null || $t > $best)) {
+            $best = $t;
+        }
+    }
+    return $best === null || $now - $best >= MLD_ACTIVE_KEEP ? null : max(0, $now - $best);
+}
+
+/** Seconds since any organiser's laptop last checked in, rounded to the minute; null if never. */
+function mld_active_ago()
+{
+    $list = mld_guarded_read('active.php');
+    $t = isset($list[MLD_ACTIVE_LAST]) && is_int($list[MLD_ACTIVE_LAST]) ? $list[MLD_ACTIVE_LAST] : null;
+    foreach ($list as $k => $v) { // records written before "~last" existed
+        if ($k !== MLD_ACTIVE_LAST && is_int($v) && ($t === null || $v > $t)) {
+            $t = $v;
+        }
+    }
+    if ($t === null) {
+        return null;
+    }
+    return (int) (round(max(0, time() - $t) / 60) * 60);
+}
+
+function mld_active_clean(array $list, $now)
+{
+    $out = [];
+    foreach ($list as $k => $t) {
+        if (is_string($k) && preg_match('/^[0-9a-f]{32}$/D', $k) && is_int($t) && $t <= $now + 5 && $now - $t < MLD_ACTIVE_KEEP) {
+            $out[$k] = $t;
+        }
+    }
+    if (isset($list[MLD_ACTIVE_LAST]) && is_int($list[MLD_ACTIVE_LAST]) && $list[MLD_ACTIVE_LAST] <= $now + 5) {
+        $out[MLD_ACTIVE_LAST] = $list[MLD_ACTIVE_LAST];
+    }
+    return $out;
 }
 
 /** Deletes session files older than SESSION_HOURS (hosts often switch PHP's own clean-up off). */
@@ -853,8 +1371,11 @@ function mld_is_https()
  * Request body
  * =============================================================================================== */
 
-/** The JSON object in the request body: 415 if not JSON, 413 if over 8 KB, 400 if malformed. */
-function mld_json_body()
+/**
+ * The JSON object in the request body: 415 if not JSON, 413 if over $max bytes (8 KB unless the action allows more),
+ * 400 if malformed. $assoc false: objects stay objects (so {} and [] are told apart).
+ */
+function mld_json_body($max = MLD_MAX_BODY, $assoc = true)
 {
     $ct = isset($_SERVER['CONTENT_TYPE']) ? $_SERVER['CONTENT_TYPE']
         : (isset($_SERVER['HTTP_CONTENT_TYPE']) ? $_SERVER['HTTP_CONTENT_TYPE'] : '');
@@ -863,18 +1384,18 @@ function mld_json_body()
         mld_fail(415, 'unsupported_media_type', 'Please send JSON (Content-Type: application/json).');
     }
     $len = isset($_SERVER['CONTENT_LENGTH']) ? trim((string) $_SERVER['CONTENT_LENGTH'], MLD_TRIM) : '';
-    if ($len !== '' && (!preg_match('/^[0-9]{1,12}$/D', $len) || (int) $len > MLD_MAX_BODY)) {
+    if ($len !== '' && (!preg_match('/^[0-9]{1,12}$/D', $len) || (int) $len > $max)) {
         mld_fail(413, 'too_large', 'The request is too large.');
     }
     $in = @fopen('php://input', 'rb');
-    $raw = $in ? stream_get_contents($in, MLD_MAX_BODY + 1) : '';
+    $raw = $in ? stream_get_contents($in, $max + 1) : '';
     if ($in) {
         fclose($in);
     }
     if (!is_string($raw)) {
         $raw = '';
     }
-    if (strlen($raw) > MLD_MAX_BODY) {
+    if (strlen($raw) > $max) {
         mld_fail(413, 'too_large', 'The request is too large.');
     }
     if (strncmp($raw, "\xEF\xBB\xBF", 3) === 0) {
@@ -884,7 +1405,8 @@ function mld_json_body()
     if ($raw === '' || $raw[0] !== '{') {
         mld_fail(400, 'bad_request', 'The request must be a JSON object.');
     }
-    $data = json_decode($raw, true, 32);
+    $depth = $assoc ? 32 : 64;
+    $data = json_decode($raw, $assoc, $depth);
     if (json_last_error() === JSON_ERROR_UTF16) {
         // A lone UTF-16 surrogate escape: drop it, as the app does, and try again.
         $bs = '\\\\';
@@ -894,9 +1416,9 @@ function mld_json_body()
             '/(?<!' . $bs . ')((?:' . $bs . $bs . ')*)' . $hi . '(?!' . $lo . ')/',
             '/(?<!' . $hi . ')(?<!' . $bs . ')((?:' . $bs . $bs . ')*)' . $lo . '/',
         ], '$1', $raw);
-        $data = is_string($raw) ? json_decode($raw, true, 32) : null;
+        $data = is_string($raw) ? json_decode($raw, $assoc, $depth) : null;
     }
-    if (json_last_error() !== JSON_ERROR_NONE || !is_array($data)) {
+    if (json_last_error() !== JSON_ERROR_NONE || !($assoc ? is_array($data) : is_object($data))) {
         mld_fail(400, 'bad_request', 'The request is not valid JSON.');
     }
     return $data;
@@ -1065,6 +1587,21 @@ function mld_config_apply(array $config, $in, $strict)
             mld_fail(400, 'invalid', $k . ' must be text.', $k);
         }
     }
+    if (array_key_exists('eventName', $in)) {
+        if (is_string($in['eventName'])) {
+            $out['eventName'] = trim(mld_cut(mld_clean_line($in['eventName']), MLD_EVENT_NAME_MAX), ' ');
+        } elseif ($strict) {
+            mld_fail(400, 'invalid', 'eventName must be text.', 'eventName');
+        }
+    }
+    if (array_key_exists('eventDate', $in)) {
+        $d = $in['eventDate'];
+        if (is_string($d) && ($d === '' || preg_match('/^(0[1-9]|[12][0-9]|3[01])-(0[1-9]|1[0-2])-[0-9]{4}$/D', $d))) {
+            $out['eventDate'] = $d;
+        } elseif ($strict) {
+            mld_fail(400, 'invalid', 'eventDate must be a date like 10-10-2026.', 'eventDate');
+        }
+    }
     foreach ($out as $k => $v) {
         if (!array_key_exists($k, MLD_DEFAULT_CONFIG) || gettype($v) !== gettype(MLD_DEFAULT_CONFIG[$k])) {
             unset($out[$k]);
@@ -1075,6 +1612,12 @@ function mld_config_apply(array $config, $in, $strict)
         $out['consentText'] = MLD_DEFAULT_CONFIG['consentText']; // guests must always see what they agree to
     }
     return $out;
+}
+
+/** Milliseconds since 1970 (the laptops line their clocks up with the server's). */
+function mld_now_ms()
+{
+    return (int) floor(microtime(true) * 1000);
 }
 
 function mld_now_iso()
@@ -1141,25 +1684,7 @@ function mld_limit_hit($bucket, $max, $window)
 /** Read-modify-write of data/limits.php under flock(LOCK_EX). A corrupt file simply starts again. */
 function mld_limits(callable $fn)
 {
-    mld_prepare_dir();
-    $file = mld_path('limits.php');
-    $h = @fopen($file, 'c+');
-    if (!$h) {
-        mld_storage_error();
-    }
-    @chmod($file, 0600);
-    try {
-        if (!flock($h, LOCK_EX)) {
-            mld_storage_error();
-        }
-        $raw = stream_get_contents($h);
-        $limits = [];
-        if (is_string($raw) && strncmp($raw, MLD_GUARD, strlen(MLD_GUARD)) === 0) {
-            $decoded = json_decode(trim(substr($raw, strlen(MLD_GUARD)), MLD_TRIM), true);
-            if (is_array($decoded)) {
-                $limits = $decoded;
-            }
-        }
+    return mld_guarded_update('limits.php', function (array &$limits) use ($fn) {
         // Drop expired and malformed counters, and never keep more than 5000.
         $now = time();
         foreach ($limits as $k => $rec) {
@@ -1174,8 +1699,60 @@ function mld_limits(callable $fn)
             });
             $limits = array_slice($limits, 0, 5000, true);
         }
-        $result = $fn($limits);
-        $json = json_encode((object) $limits, JSON_UNESCAPED_SLASHES);
+        return $fn($limits);
+    });
+}
+
+/* ---- Small guarded JSON files (limits.php, active.php): guard line + one JSON object ------------ */
+
+/** The JSON object in a guarded file's contents; [] when missing or corrupt. */
+function mld_guarded_parse($raw)
+{
+    if (!is_string($raw) || strncmp($raw, MLD_GUARD, strlen(MLD_GUARD)) !== 0) {
+        return [];
+    }
+    $decoded = json_decode(trim(substr($raw, strlen(MLD_GUARD)), MLD_TRIM), true);
+    return is_array($decoded) ? $decoded : [];
+}
+
+/** Reads a guarded JSON file under a shared lock (never sees a half-written file). Missing: []. */
+function mld_guarded_read($name)
+{
+    $file = mld_path($name);
+    if (!is_file($file)) {
+        return [];
+    }
+    $h = @fopen($file, 'rb');
+    if (!$h) {
+        return [];
+    }
+    try {
+        @flock($h, LOCK_SH);
+        $raw = stream_get_contents($h);
+    } finally {
+        @flock($h, LOCK_UN);
+        fclose($h);
+    }
+    return mld_guarded_parse($raw);
+}
+
+/** Read-modify-write of a guarded JSON file under flock(LOCK_EX); $fn gets the data by reference. */
+function mld_guarded_update($name, callable $fn)
+{
+    mld_prepare_dir();
+    $file = mld_path($name);
+    $h = @fopen($file, 'c+');
+    if (!$h) {
+        mld_storage_error();
+    }
+    @chmod($file, 0600);
+    try {
+        if (!flock($h, LOCK_EX)) {
+            mld_storage_error();
+        }
+        $data = mld_guarded_parse(stream_get_contents($h));
+        $result = $fn($data);
+        $json = json_encode((object) $data, JSON_UNESCAPED_SLASHES);
         $content = MLD_GUARD . "\n" . ($json === false ? '{}' : $json) . "\n";
         rewind($h);
         if (!ftruncate($h, 0) || fwrite($h, $content) !== strlen($content)) {
@@ -1290,6 +1867,10 @@ function mld_init_files()
             'secret' => bin2hex(random_bytes(32)),
             'config' => MLD_DEFAULT_CONFIG,
             'winners' => ['phones' => [], 'emails' => []],
+            'evVersion' => 0,
+            'evHas' => false,
+            'epochFrom' => 'start',
+            'eventId' => bin2hex(random_bytes(8)),
         ]);
     }
 }
@@ -1335,6 +1916,16 @@ function mld_state_parse($raw)
         'secret' => $s['secret'],
         'config' => mld_config_apply(MLD_DEFAULT_CONFIG, isset($s['config']) ? $s['config'] : [], false),
         'winners' => mld_winners_clean(isset($s['winners']) ? $s['winners'] : null),
+        // The laptops' event backup: its version (counts up on every store and on "New event"), whether it holds
+        // anything, and why the current epoch began: 'newEvent', 'signups' (only the sign-ups were cleared) or
+        // 'start' (a new data folder).
+        'evVersion' => isset($s['evVersion']) && is_int($s['evVersion']) ? max(0, $s['evVersion']) : 0,
+        'evHas' => isset($s['evHas']) && $s['evHas'] === true,
+        'epochFrom' => isset($s['epochFrom']) && in_array($s['epochFrom'], ['newEvent', 'signups', 'start'], true) ? $s['epochFrom'] : 'start',
+        // Which event this draw holds: random, new on "New event" only (a sign-up clear keeps it), so a laptop that
+        // missed a New event can tell its copy belongs to an earlier event. Older state files: their epoch.
+        'eventId' => isset($s['eventId']) && is_string($s['eventId']) && preg_match('/^[0-9a-f]{8,64}$/D', $s['eventId'])
+            ? $s['eventId'] : $s['epoch'],
     ];
 }
 
