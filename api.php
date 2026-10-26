@@ -246,7 +246,7 @@ function mld_public_config(array $state)
         'organiserActive' => mld_active_any(),
         // Does this draw still hold an event (a laptop's event backup or sign-ups since the last "New event")? Yes/no.
         'hasEvent' => !empty($state['evHas']) || $state['count'] > 0,
-        // Seconds since an organiser's laptop last checked in, rounded to the minute (null: never).
+        // Seconds since an organiser's laptop last ran the wheel here, rounded to the minute (null: never).
         'lastActiveAgo' => mld_active_ago(),
     ] + mld_draw_folders();
 }
@@ -415,7 +415,8 @@ function mld_field(array $b, $key)
  * Admin actions (the organiser's laptop). PHP session cookie "mld_session".
  * =============================================================================================== */
 
-/** POST login: { password } */
+/** POST login: { password, quiet? } — quiet: a log-in only to clear this draw from another draw's "All draws" (it doesn't
+    count as a laptop using this draw). */
 function mld_action_login()
 {
     $GLOBALS['mld_soft'] = isset($_GET['soft']) && $_GET['soft'] === '1';
@@ -474,8 +475,11 @@ function mld_action_login()
     session_write_close();
     mld_session_cleanup();
     // A laptop that has just logged in counts as using this draw straight away, so a second laptop logging in
-    // at the same moment is told (see action=session, othersActive).
-    mld_active_touch(is_string($sid) ? $sid : '', true);
+    // at the same moment is told (see action=session, othersActive). It doesn't make the draw's event "recently
+    // used" yet (lastActiveAgo): only running the wheel does.
+    if (!(isset($b['quiet']) && $b['quiet'] === true)) {
+        mld_active_touch(is_string($sid) ? $sid : '', true, false);
+    }
     mld_send(200, ['ok' => true]);
 }
 
@@ -526,7 +530,7 @@ function mld_action_session()
 function mld_action_entries()
 {
     mld_require_admin();
-    mld_active_touch(); // the laptop checks every few seconds: this draw is in use
+    mld_active_touch(null, false, !mld_idle()); // the laptop checks every few seconds: this draw is in use
     $sid = isset($_COOKIE['mld_session']) && is_string($_COOKIE['mld_session']) ? $_COOKIE['mld_session'] : '';
     $since = isset($_GET['since']) ? $_GET['since'] : '';
     if (!is_string($since) || ($since !== '' && !preg_match('/^[0-9]{1,15}$/D', $since))) {
@@ -724,7 +728,7 @@ function mld_action_event_state()
         mld_require_csrf();
     }
     mld_require_admin();
-    mld_active_touch();
+    mld_active_touch(null, false, !mld_idle());
     if (!$post) {
         $have = isset($_GET['have']) ? $_GET['have'] : '';
         if (!is_string($have) || ($have !== '' && !preg_match('/^[0-9]{1,15}$/D', $have))) {
@@ -1230,11 +1234,19 @@ function mld_active_key($sid)
     return substr(hash_hmac('sha256', 'active:' . (string) $sid, $state['secret']), 0, 32);
 }
 
+/** &idle=1: the laptop is logged in but not running the wheel yet (log-in, "Name your event", a held event's screen). */
+function mld_idle()
+{
+    return isset($_GET['idle']) && $_GET['idle'] === '1';
+}
+
 /**
  * Called on every organiser poll (and at log-in, with that new session's id); writes at most every
- * MLD_ACTIVE_WRITE_EVERY seconds per session unless $force.
+ * MLD_ACTIVE_WRITE_EVERY seconds per session unless $force. $use: the laptop is running the wheel, so the draw's event
+ * counts as used now ("~last", lastActiveAgo); a log-in or a laptop that is only looking keeps the draw "in use"
+ * (organiserActive) without making an old event recent again.
  */
-function mld_active_touch($sid = null, $force = false)
+function mld_active_touch($sid = null, $force = false, $use = true)
 {
     if ($sid === null) {
         $sid = isset($_COOKIE['mld_session']) && is_string($_COOKIE['mld_session']) ? $_COOKIE['mld_session'] : '';
@@ -1245,13 +1257,18 @@ function mld_active_touch($sid = null, $force = false)
     $key = mld_active_key($sid);
     $now = time();
     $list = mld_guarded_read('active.php');
-    if (!$force && isset($list[$key]) && is_int($list[$key]) && $list[$key] <= $now && $now - $list[$key] < MLD_ACTIVE_WRITE_EVERY) {
+    $fresh = function ($k) use ($list, $now) {
+        return isset($list[$k]) && is_int($list[$k]) && $list[$k] <= $now && $now - $list[$k] < MLD_ACTIVE_WRITE_EVERY;
+    };
+    if (!$force && $fresh($key) && (!$use || $fresh(MLD_ACTIVE_LAST))) {
         return;
     }
-    mld_guarded_update('active.php', function (array &$list) use ($key, $now) {
+    mld_guarded_update('active.php', function (array &$list) use ($key, $now, $use) {
         $list = mld_active_clean($list, $now);
         $list[$key] = $now;
-        $list[MLD_ACTIVE_LAST] = $now;
+        if ($use) {
+            $list[MLD_ACTIVE_LAST] = $now;
+        }
     });
 }
 
@@ -1299,14 +1316,16 @@ function mld_active_others_ago($exceptKey)
     return $best === null || $now - $best >= MLD_ACTIVE_KEEP ? null : max(0, $now - $best);
 }
 
-/** Seconds since any organiser's laptop last checked in, rounded to the minute; null if never. */
+/** Seconds since an organiser's laptop last ran the wheel here, rounded to the minute; null if never. */
 function mld_active_ago()
 {
     $list = mld_guarded_read('active.php');
     $t = isset($list[MLD_ACTIVE_LAST]) && is_int($list[MLD_ACTIVE_LAST]) ? $list[MLD_ACTIVE_LAST] : null;
-    foreach ($list as $k => $v) { // records written before "~last" existed
-        if ($k !== MLD_ACTIVE_LAST && is_int($v) && ($t === null || $v > $t)) {
-            $t = $v;
+    if ($t === null) {
+        foreach ($list as $k => $v) { // records written before "~last" existed
+            if ($k !== MLD_ACTIVE_LAST && is_int($v) && ($t === null || $v > $t)) {
+                $t = $v;
+            }
         }
     }
     if ($t === null) {

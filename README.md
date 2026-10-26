@@ -57,18 +57,23 @@ accounts, adverts, tracking or network requests.
    `ADMIN_PASSWORD` in each `api.php`. Each folder is a separate draw: its own sign-ups, Excel backup and New event.
 2. One QR code for all of them: `https://themaap.co.uk/draw/`. Guests go straight to the event that's running;
    when several are running they tap theirs under **Which event are you at?** (listed by event name). An event
-   counts as running while its laptop is on it, and also for 12 hours after its laptop was last connected (laptop
-   asleep, lid shut, Wi-Fi dropped) as long as its sign-ups are open. Close sign-ups or clear the draw when an
-   event is over, so guests at the next one aren't offered it.
+   counts as running while its laptop is on it, and also for 12 hours after its wheel was last open on a laptop
+   (laptop asleep, lid shut, Wi-Fi dropped) as long as its sign-ups are open. Only running the wheel counts: logging
+   in, looking at a draw on **Name your event**, or opening **Clear** in **All draws** doesn't make an old event
+   recent again. Close sign-ups or clear the draw when an event is over, so guests at the next one aren't offered it.
 3. Organisers always open `https://themaap.co.uk/draw/#wheel`. If Draw 1 already has an event, the page moves to
    the first free draw after 5 seconds (or **This is my event — continue it**); the header shows which draw you're
-   on. Draw 1 counts as having an event while a laptop is on it, and for 12 hours after its laptop was last
-   connected (laptop asleep or closed); after that, or once it is cleared, it is free again. When a laptop is on it
-   right now there is also **Stay on Draw 1 (same event)**. If another laptop takes your draw while you're typing
-   the password, you're told straight after logging in and offered the next free draw.
-   - **Your own event**: if this browser is already logged in to Draw 1's event, it asks instead: **Continue
-     "Newcastle"** or **Start a new event on Draw 2** (no countdown). If it is logged in to another draw's event, it
-     offers **Continue "Leeds" on Draw 2**. Reloading the page on your own event goes straight back to it.
+   on. Draw 1 counts as having an event while a laptop is on it, and for 12 hours after its wheel was last open
+   (laptop asleep or closed); after that, or once it is cleared, it is free again. When a laptop is on it right now
+   there is also **Stay on Draw 1 (same event)**. The free draw is the first empty one (else one whose event is
+   over), never one that is running an event, including when that draw is taken while you're on your way or typing
+   the password.
+   - **Your own event**: if this browser is running Draw 1's event, it asks instead: **Continue "Newcastle"** or
+     **Start a new event on Draw 2** (no countdown), plus **Continue "Leeds" on Draw 3** if it also runs another
+     draw. If it only runs another draw's event, it offers **Continue "Leeds" on Draw 2** first. An event is "yours"
+     only if it is the one this browser last ran there, so an event another laptop started after a clear never is.
+     After **Start a new event on Draw 2**, the next visit offers Draw 2's event first. Reloading the page on your
+     own event goes straight back to it.
 4. **Back to your event from another laptop** (e.g. your laptop died on Draw 3): open
    `https://themaap.co.uk/draw/#wheel`; the log-in screen and **Name your event** list *Or continue an event that's
    already running*, e.g. **Continue: Newcastle — Draw 3**. Choose it, log in, and the wheel, winners, round and
