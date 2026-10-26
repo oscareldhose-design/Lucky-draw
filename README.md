@@ -61,6 +61,9 @@ accounts, adverts, tracking or network requests.
    (laptop asleep, lid shut, Wi-Fi dropped) as long as its sign-ups are open. Only running the wheel counts: logging
    in, looking at a draw on **Name your event**, or opening **Clear** in **All draws** doesn't make an old event
    recent again. Close sign-ups or clear the draw when an event is over, so guests at the next one aren't offered it.
+   Only named events count: a laptop left on **Name your event** (e.g. after its event was cleared) isn't offered.
+   When no event is running, phones show *There's no draw open right now.* and the form appears by itself as soon
+   as an organiser names their event and opens the wheel.
 3. Organisers always open `https://themaap.co.uk/draw/#wheel`. If Draw 1 already has an event, the page moves to
    the first free draw after 5 seconds (or **This is my event — continue it**); the header shows which draw you're
    on. Draw 1 counts as having an event while a laptop is on it, and for 12 hours after its wheel was last open

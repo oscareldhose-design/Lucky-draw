@@ -4054,7 +4054,7 @@ function drawRow(slot) {
   const c = slot.cfg;
   const mine = slot.name === PAGE_SLOT.name;
   const held = !!(c.eventName || c.hasEvent);
-  const meta = [mine ? 'This laptop' : slot.live ? 'In use on a laptop now' : '',
+  const meta = [mine ? 'This laptop' : slot.live ? (held ? 'In use on a laptop now' : 'Open on a laptop — no event yet') : '',
     held && !slot.live && c.lastActiveAgo != null ? `Last used ${agoText(c.lastActiveAgo)}` : '',
     held && !c.open ? 'Sign-ups closed' : ''].filter(Boolean).join(' · ');
   return h('li', { class: 'dw-row', dataset: held ? { slot: slot.name } : { slot: slot.name, empty: '' } },
@@ -4700,6 +4700,7 @@ let guestTarget = null;
 let guestLive = [];        // the events running when the guest was last routed (the list "Choose again" shows)
 let guestPicked = false;   // the guest chose from that list (so "Not your event? Choose again" is offered)
 let guestChecking = false;
+let guestNone = false;     // "There's no draw open right now" is showing
 const GUEST_MSG = {
   duplicate: 'This phone number or email has already been entered.',
   rate: 'Too many attempts — please wait a minute and try again.',
@@ -4751,18 +4752,20 @@ const drawHolds = x => !!(x.cfg && (x.cfg.eventName || x.cfg.hasEvent));
     whose laptop was there in the last 12 hours (sign-ups open or closed: a closed event may be mid-draw). */
 const drawBusy = x => !!(x.present && (x.live || (drawHolds(x) && x.cfg.lastActiveAgo != null && x.cfg.lastActiveAgo < EVENT_RECENT_S)));
 /** The events guests can enter now: every draw with a named event whose laptop is on it, or was in the last 12 hours
-    and still takes sign-ups. None named yet: any draw a laptop is running. */
+    and still takes sign-ups. A draw without an event name has no event yet (every event is named before its wheel
+    opens), even with a laptop on it, e.g. one left on "Name your event" after its event was cleared. */
 function runningEvents(slots) {
-  const named = slots.filter(x => x.present && x.cfg.eventName && (x.live
+  return slots.filter(x => x.present && x.cfg.eventName && (x.live
     || (x.cfg.open && !x.cfg.full && x.cfg.lastActiveAgo != null && x.cfg.lastActiveAgo < EVENT_RECENT_S)));
-  return named.length ? named : slots.filter(x => x.live);
 }
 /**
- * 0 events running: this folder's own form (or its closed / full message). 1: straight to that event's form, even
- * if it is another draw (no visible switch; its name shows above the form). 2 or more: "Which event are you at?".
- * keep: a re-check that leaves a guest on the event they chose while it is still running.
+ * 0 events running: "There's no draw open right now" (in the draw folders; elsewhere this folder's own form). 1:
+ * straight to that event's form, even if it is another draw (no visible switch; its name shows above the form).
+ * 2 or more: "Which event are you at?". keep: a re-check that leaves a guest on the event they chose while it is
+ * still running.
  */
 function routeGuest(slots, { keep = false } = {}) {
+  guestNone = false;
   const live = runningEvents(slots);
   if (live.length >= 2) {
     guestLive = live;
@@ -4775,9 +4778,38 @@ function routeGuest(slots, { keep = false } = {}) {
   guestPicked = false;
   const own = PAGE_SLOT ? slots.find(x => x.name === PAGE_SLOT.name && x.present) : null;
   if (live.length === 1) setGuestTarget(live[0]);
-  else if (own) setGuestTarget(own);
-  else renderGuest(); // a folder outside the draw folders: as before
+  else if (own) { showGuestNone(); return; }
+  else renderGuest(); // a folder outside the draw folders (or no draw answered): this folder's form, as before
   showGuestEntry();
+}
+/** No event is running on any draw: nothing to enter yet. Looks again every 15 s (and when the guest comes back to the
+    page), so the form appears by itself once an organiser has named their event and opened the wheel. */
+function showGuestNone() {
+  clearTimeout(guestRecheck);
+  stopGoingHome();
+  guestNone = true;
+  renderGuestBrand(DEFAULTS.title, '');
+  suForm.hidden = true;
+  $('#suEvent').hidden = true;
+  $('#suPick').hidden = true;
+  $('#suSuccess').hidden = true;
+  $('#suAgainRow').hidden = true;
+  $('#suStateTitle').textContent = 'There’s no draw open right now.';
+  $('#suStateText').textContent = 'The sign-up form appears here as soon as the event starts.';
+  $('#suState').hidden = false;
+  focusTop('#suStateTitle');
+  guestRecheck = setTimeout(async function recheck() {
+    if (!guestNone || guestChecking) return;
+    guestChecking = true;
+    try {
+      const slots = await fetchSlots({ timeout: 5000 });
+      if (!guestNone) return;
+      if (runningEvents(slots).length) routeGuest(slots);
+      else guestRecheck = setTimeout(recheck, 15000);
+    } finally {
+      guestChecking = false;
+    }
+  }, 15000);
 }
 function setGuestTarget(slot) {
   if (!guestTarget || guestTarget.name !== slot.name) { guestClient = null; guestFormError(''); }
@@ -4841,7 +4873,7 @@ $('#suAgain').addEventListener('click', () => { if (guestLive.length >= 2 && !gu
 /** Back on the page (e.g. after checking a message): look again at which events are running — only while the list
     or an untouched form is showing, so nothing a guest typed is ever lost. */
 function guestIdle() {
-  if (!$('#suPick').hidden) return true;
+  if (guestNone || !$('#suPick').hidden) return true;
   return !suForm.hidden && !guestSending && !$('#suConsent').checked && !$('#suAdult').checked && !Object.values(suFields).some(i => i.value.trim());
 }
 document.addEventListener('visibilitychange', async () => {
