@@ -2668,7 +2668,7 @@ function spinNow(opts, pick = null) {
       const entry = entries[winIdx];
       onLanded(entry, round, prize, winIdx, !!opts.redraw);
       if (recording) {
-        if (currentWin) currentWin.recorded = true; // a no-show redraw of this winner is recorded too
+        if (currentWin) currentWin.recorded = recording.setup; // a no-show redraw of this winner is recorded too
         startSpinVideo(recording, entry, currentWin ? currentWin.rec.id : '');
       }
       resolve(JSON.parse(JSON.stringify(entry)));
@@ -3591,9 +3591,8 @@ function finishWinner(action) {
   if (action === 'noshow') {
     if (activeEntries().length) {
       toast(`${rec.name} marked as a no-show. Drawing again for round ${rec.round}…`);
-      // A recorded draw's redraw is recorded too (the LED screen showed the first one); null if video can't be made now.
-      if (recorded) pickH264().then(setup => spin({ redraw: { round: rec.round, prize: rec.prize }, record: setup }));
-      else spin({ redraw: { round: rec.round, prize: rec.prize } });
+      // A recorded draw's redraw is recorded too (the LED screen showed the first one), with the same video set-up.
+      spin({ redraw: { round: rec.round, prize: rec.prize }, ...(recorded ? { record: recorded } : {}) });
     } else toast('No entries left on the wheel to draw again.', { type: 'error' });
   } else {
     setTimeout(() => { if (!winnerDialog.open && !signupOpen) $('#spinBtn').focus({ preventScroll: true }); }, 0);
