@@ -1341,7 +1341,7 @@ body.event-mode .ev-chip { display: none; }
     <div class="su-brand-text">
       <p class="su-kicker">Organiser</p>
       <p class="su-title" id="swBrandTitle">Draw 1</p>
-      <p class="su-sub">In use on another laptop</p>
+      <p class="su-sub" id="swBrandSub">In use on another laptop</p>
     </div>
   </div>
   <div class="su-main">
@@ -4239,7 +4239,8 @@ $('#evContinue').addEventListener('click', continueHeldEvent);
 async function useOtherDraw(name = '') {
   if (!evStepOpen || !PAGE_SLOT) return false;
   const slots = (await fetchSlots({ timeout: 5000 })).filter(x => x.present && !x.live && x.name !== PAGE_SLOT.name);
-  const target = slots.find(x => !x.cfg.hasEvent) || slots[0];
+  // An empty draw first; else one whose event is over; else any without a laptop on it.
+  const target = slots.find(x => !drawHolds(x)) || slots.find(x => !drawBusy(x)) || slots[0];
   if (!target) return false;
   await leaveDraw();
   try { sessionStorage.setItem(SWITCH_KEY, JSON.stringify({ from: PAGE_SLOT.name, to: target.name, at: Date.now(), hops: 1, name })); } catch (e) { /* optional */ }
@@ -4733,15 +4734,20 @@ async function startGuest(probe) {
   signupEl.hidden = false;
   routeGuest(slots);
 }
-/* How long a named event still counts as running for guests after its laptop last checked in: a laptop that has gone
-   to sleep, lost its Wi-Fi or closed its tab still has guests arriving. Clearing a draw (or New event) removes its
-   event name, so it drops out straight away. */
-const GUEST_RECENT_S = 12 * 3600;
+/* How long an event still counts as running after its laptop last checked in: a laptop that has gone to sleep, lost
+   its Wi-Fi or closed its tab still has guests arriving. Clearing a draw (or New event) removes its event, so it
+   drops out straight away. */
+const EVENT_RECENT_S = 12 * 3600;
+/** The draw holds an event (an event name, or sign-ups / a laptop's event backup since it was last cleared). */
+const drawHolds = x => !!(x.cfg && (x.cfg.eventName || x.cfg.hasEvent));
+/** The draw is running an event, so a new organiser is taken past it: a laptop is on it now, or it holds an event
+    whose laptop was there in the last 12 hours (sign-ups open or closed: a closed event may be mid-draw). */
+const drawBusy = x => !!(x.present && (x.live || (drawHolds(x) && x.cfg.lastActiveAgo != null && x.cfg.lastActiveAgo < EVENT_RECENT_S)));
 /** The events guests can enter now: every draw with a named event whose laptop is on it, or was in the last 12 hours
     and still takes sign-ups. None named yet: any draw a laptop is running. */
 function runningEvents(slots) {
   const named = slots.filter(x => x.present && x.cfg.eventName && (x.live
-    || (x.cfg.open && !x.cfg.full && x.cfg.lastActiveAgo != null && x.cfg.lastActiveAgo < GUEST_RECENT_S)));
+    || (x.cfg.open && !x.cfg.full && x.cfg.lastActiveAgo != null && x.cfg.lastActiveAgo < EVENT_RECENT_S)));
   return named.length ? named : slots.filter(x => x.live);
 }
 /**
@@ -5024,21 +5030,27 @@ async function startOrganiser(probe) {
   switchedFrom = readSwitchedFrom();
   const join = readJoin();
   if (join) joinIntent = true;
-  // 1. Already logged in to THIS draw in this browser: it's this laptop's draw, stay. A laptop that has never logged
-  //    in here (or logged out) skips the question; one that may still be logged in asks api.php.
+  // 1. Already logged in to THIS draw in this browser? A laptop that has never logged in here (or logged out) skips
+  //    the question; one that may still be logged in asks api.php.
+  let here = false;
   if (!storageProbe() || lsGet(ORGANISER_KEY) === '1') {
     const r = await api('session', { admin: true, query: { soft: 1 } }); // an expired log-in is no error here
-    if (r.ok) { enterOrganiserApp(); return; }
     if (r.network) { showLogin('Couldn’t reach the server. Check your internet connection, then log in.'); return; }
+    here = r.ok;
   }
-  // 2. Continuing an event chosen by name on another draw's page: straight to this draw's log-in (same event).
+  // 2. Opened at the address every organiser uses (Draw 1), not reloading this laptop's own event and not sent here on
+  //    purpose: if Draw 1 is already running an event, on to a free draw, or back to this laptop's own event.
+  if (PAGE_SLOT && PAGE_SLOT.index === 0 && !join && !switchedFrom && !(here && isReload()) && await routeOrganiser(probe, here)) return;
+  // 3. Logged in here: it's this laptop's draw, stay.
+  if (here) { enterOrganiserApp(); return; }
+  // 4. Continuing an event chosen by name on another draw's page: straight to this draw's log-in (same event).
   if (join) {
     serverEventHint = (sync.cfg && sync.cfg.eventName) || join.name;
     const name = serverEventHint;
     showLogin(`Log in to continue ${name ? `“${name}”` : 'the event'} on ${PAGE_SLOT.label}.`, 'info');
     return;
   }
-  // 3. Another laptop is running this draw: offer the first free draw (SPEC 2.18 C, 2.21, 2.22).
+  // 5. Another laptop is running this draw: offer the first free draw (SPEC 2.18 C, 2.21, 2.22).
   if (PAGE_SLOT && sync.cfg && sync.cfg.organiserActive) {
     serverEventHint = sync.cfg.eventName;
     if (!switchedFrom || switchedFrom.hops < 3) { // never bounce round the draws for ever
@@ -5051,12 +5063,104 @@ async function startOrganiser(probe) {
     showLogin(`All draws are in use by other laptops. Log in only if you’re running the same event as ${PAGE_SLOT.label}.`);
     return;
   }
-  // 4. The normal log-in.
+  // 6. The normal log-in.
   showLogin(switchedFrom ? switchedMsg() : '', 'info');
 }
+/** This page was reloaded (or reached with Back / Forward) rather than opened afresh. */
+function isReload() {
+  try {
+    const nav = performance.getEntriesByType('navigation')[0];
+    return !!nav && (nav.type === 'reload' || nav.type === 'back_forward');
+  } catch (e) { return false; }
+}
+/** Moves this page to another draw (the automatic switch: that draw says where the organiser came from). */
+function moveToDraw(target) {
+  clearTimeout(switchTimer);
+  try { sessionStorage.setItem(SWITCH_KEY, JSON.stringify({ from: PAGE_SLOT.name, to: target.name, at: Date.now(), hops: (switchedFrom ? switchedFrom.hops : 0) + 1 })); } catch (e) { /* the banner there is optional */ }
+  location.replace(target.url + '#wheel');
+}
+/** The first of these draws that this browser is logged in to (its own event, e.g. reopened after a restart), or null. */
+async function findMyDraw(list) {
+  const known = storageProbe();
+  const asks = list.map(x => async () => {
+    if (known && lsGet('map-lucky-draw:organiser-session:v1:' + x.dir) !== '1') return false; // never logged in there
+    const r = await api('session', { admin: true, url: x.apiUrl, query: { soft: 1 }, timeout: 4000 });
+    return r.ok;
+  });
+  const mine = await Promise.all(asks.map(f => f()));
+  return list.find((x, i) => mine[i]) || null;
+}
+/**
+ * Draw 1 already runs an event (a laptop on it now, or an event used in the last 12 hours): returns true once a screen
+ * is shown —
+ *   this browser runs Draw 1's event: "Draw 1 has your event “Newcastle”" — Continue it, or Start a new event on Draw 2;
+ *   this browser runs another draw's event: "Continue “Leeds” on Draw 2", or Start a new event on a free draw;
+ *   otherwise: "Draw 1 already has an event: “Newcastle”. Taking you to Draw 2 in 5…" (or "This is my event").
+ * false: Draw 1 is free (the normal log-in follows).
+ */
+async function routeOrganiser(probe, here) {
+  const slots = await fetchSlots({ timeout: 4000, known: { [PAGE_SLOT.name]: probe } });
+  noteSlots(slots);
+  const me = slots.find(x => x.name === PAGE_SLOT.name);
+  if (!me || !me.present || !drawBusy(me) || (here && !drawHolds(me))) return false;
+  const others = slots.filter(x => x.present && x.name !== PAGE_SLOT.name);
+  if (!others.length && (here || !me.live)) return false; // the only draw uploaded: as before (log in; "This draw still holds …")
+  // An empty draw first; else one whose event is over (it then offers to start a new event there).
+  const free = others.find(x => !x.live && !drawHolds(x)) || others.find(x => !drawBusy(x)) || null;
+  const label = PAGE_SLOT.label;
+  const name = me.cfg.eventName;
+  serverEventHint = name;
+  if (here) {
+    openSwitchScreen({
+      heading: `${label} has your event${name ? ` “${name}”` : ''}.`,
+      count: free ? `Continue it, or start a new event on ${free.label}.` : 'Continue it. Every other draw already has an event.',
+      go: name ? `Continue “${name}”` : 'Continue your event', stay: free ? `Start a new event on ${free.label}` : '', mine: '',
+      sub: 'Your event'
+    });
+    document.title = `${label} has your event · MAP Lucky Draw`;
+    $('#swGo').onclick = () => { joinIntent = true; $('#switchNotice').hidden = true; enterOrganiserApp(); };
+    if (free) $('#swStay').onclick = () => moveToDraw(free);
+    setTimeout(() => $('#swGo').focus(), 0);
+    return true;
+  }
+  const busyText = me.live ? `${label} is already being used by another laptop.` : `${label} already has an event${name ? `: “${name}”` : ''}.`;
+  const mine = await findMyDraw(others.filter(drawBusy));
+  if (mine) {
+    const theirs = mine.cfg.eventName;
+    openSwitchScreen({
+      heading: busyText,
+      count: `You’re running ${theirs ? `“${theirs}”` : 'an event'} on ${mine.label}.`,
+      go: `Continue ${theirs ? `“${theirs}”` : 'it'} on ${mine.label}`, stay: free ? `Start a new event on ${free.label}` : '',
+      mine: name ? `“${name}” on ${label} is my event` : `${label}’s event is mine`,
+      sub: me.live ? 'In use on another laptop' : 'Already has an event'
+    });
+    document.title = `${label} is in use · MAP Lucky Draw`;
+    $('#swGo').onclick = () => {
+      try { sessionStorage.setItem(JOIN_KEY, JSON.stringify({ to: mine.name, name: theirs, at: Date.now() })); } catch (e) { /* that draw then asks */ }
+      location.assign(mine.url + '#wheel');
+    };
+    if (free) $('#swStay').onclick = () => moveToDraw(free);
+    $('#swMine').onclick = () => {
+      joinIntent = true;
+      $('#switchNotice').hidden = true;
+      showLogin(`Log in to continue ${name ? `“${name}”` : 'your event'} on ${label}.`, 'info');
+    };
+    setTimeout(() => $('#swGo').focus(), 0);
+    return true;
+  }
+  if (free) { showSwitchNotice(free, { live: me.live, name }); return true; }
+  if (me.live) {
+    joinIntent = true; // logging in here means running the same event
+    showLogin(`All draws are in use by other laptops. Log in only if you’re running the same event as ${label}.`);
+  } else {
+    showLogin(`Every draw already has an event. Log in to continue ${name ? `“${name}”` : `${label}’s event`}, or start a new event and clear old ones under “All draws”.`, 'info');
+  }
+  return true;
+}
 /** The draw-in-use screen, shared by the notice before logging in and the one just after (SPEC 2.24, A3). */
-function openSwitchScreen({ heading, count, go, stay, mine }) {
+function openSwitchScreen({ heading, count, go, stay, mine, sub = 'In use on another laptop' }) {
   const me = PAGE_SLOT.label;
+  $('#swBrandSub').textContent = sub;
   document.documentElement.setAttribute('data-app', 'login');
   $('#app').inert = true;
   loginEl.hidden = true;
@@ -5074,20 +5178,21 @@ function openSwitchScreen({ heading, count, go, stay, mine }) {
   $('#swMine').className = go || stay ? 'link-btn sw-mine' : 'btn btn-primary btn-block su-submit';
   $('#switchNotice').hidden = false;
 }
-/** "Draw 1 is already being used by another laptop. Taking you to Draw 2 in 5…" */
-function showSwitchNotice(target) {
+/** "Draw 1 is already being used by another laptop. Taking you to Draw 2 in 5…" — or, with no laptop on it right now
+    (live: false), "Draw 1 already has an event: “Newcastle”. Taking you to Draw 2 in 5…". */
+function showSwitchNotice(target, { live = true, name = '' } = {}) {
   const me = PAGE_SLOT.label;
+  const heading = live ? `${me} is already being used by another laptop.` : `${me} already has an event${name ? `: “${name}”` : ''}.`;
   openSwitchScreen({
-    heading: `${me} is already being used by another laptop.`, count: `Taking you to ${target.label} in 5…`,
-    go: `Go to ${target.label} now`, stay: `Stay on ${me} (same event)`, mine: 'This is my event — continue it'
+    heading, count: `Taking you to ${target.label} in 5…`,
+    go: `Go to ${target.label} now`, stay: live ? `Stay on ${me} (same event)` : '', mine: 'This is my event — continue it',
+    sub: live ? 'In use on another laptop' : 'Already has an event'
   });
   document.title = `${me} is in use · MAP Lucky Draw`;
   const go = () => {
-    clearTimeout(switchTimer);
     $('#swCount').textContent = `Taking you to ${target.label}…`;
     $('#swGo').disabled = true;
-    try { sessionStorage.setItem(SWITCH_KEY, JSON.stringify({ from: PAGE_SLOT.name, to: target.name, at: Date.now(), hops: (switchedFrom ? switchedFrom.hops : 0) + 1 })); } catch (e) { /* the banner there is optional */ }
-    location.replace(target.url + '#wheel');
+    moveToDraw(target);
   };
   let n = 5;
   const tick = () => {
@@ -5107,7 +5212,7 @@ function showSwitchNotice(target) {
   $('#swStay').onclick = stay(`${me} is also open on another laptop. Log in to run the same event with it.`);
   $('#swMine').onclick = stay(`Log in to continue ${serverEventHint ? `“${serverEventHint}”` : 'your event'} on ${me}.`);
   tick();
-  announce(`${me} is already being used by another laptop. Taking you to ${target.label} in 5 seconds.`);
+  announce(`${heading} Taking you to ${target.label} in 5 seconds.`);
   setTimeout(() => $('#swGo').focus(), 0);
 }
 /** Right after logging in (SPEC 2.24, A3): another laptop took this draw while this one was on the log-in screen. */

@@ -60,11 +60,15 @@ accounts, adverts, tracking or network requests.
    counts as running while its laptop is on it, and also for 12 hours after its laptop was last connected (laptop
    asleep, lid shut, Wi-Fi dropped) as long as its sign-ups are open. Close sign-ups or clear the draw when an
    event is over, so guests at the next one aren't offered it.
-3. Organisers always open `https://themaap.co.uk/draw/#wheel`. If Draw 1 is in use on another laptop, the page
-   moves to the first free draw after 5 seconds (or **Stay on Draw 1 (same event)** / **This is my event —
-   continue it**); the header shows which draw you're on. A draw is free again as soon as its laptop logs out, or
-   90 seconds after it closes the wheel. If another laptop takes your draw while you're typing the password, you're
-   told straight after logging in and offered the next free draw.
+3. Organisers always open `https://themaap.co.uk/draw/#wheel`. If Draw 1 already has an event, the page moves to
+   the first free draw after 5 seconds (or **This is my event — continue it**); the header shows which draw you're
+   on. Draw 1 counts as having an event while a laptop is on it, and for 12 hours after its laptop was last
+   connected (laptop asleep or closed); after that, or once it is cleared, it is free again. When a laptop is on it
+   right now there is also **Stay on Draw 1 (same event)**. If another laptop takes your draw while you're typing
+   the password, you're told straight after logging in and offered the next free draw.
+   - **Your own event**: if this browser is already logged in to Draw 1's event, it asks instead: **Continue
+     "Newcastle"** or **Start a new event on Draw 2** (no countdown). If it is logged in to another draw's event, it
+     offers **Continue "Leeds" on Draw 2**. Reloading the page on your own event goes straight back to it.
 4. **Back to your event from another laptop** (e.g. your laptop died on Draw 3): open
    `https://themaap.co.uk/draw/#wheel`; the log-in screen and **Name your event** list *Or continue an event that's
    already running*, e.g. **Continue: Newcastle — Draw 3**. Choose it, log in, and the wheel, winners, round and
