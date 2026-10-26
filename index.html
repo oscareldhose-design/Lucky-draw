@@ -295,6 +295,11 @@ svg { flex: none; }
 .spin-btn:active:not(:disabled) { transform: translateY(3px) scale(.985); box-shadow: 0 6px 16px rgba(163, 8, 163, .35), inset 0 -2px 0 rgba(42, 0, 42, .35); }
 .spin-btn:disabled { filter: grayscale(.55) opacity(.55); cursor: not-allowed; }
 .spin-btn:focus-visible { outline-offset: 5px; border-radius: 999px; }
+.record-btn { align-self: center; }
+.record-btn .ic, .wd-video .ic { color: #d1124a; }
+body.event-mode .record-btn { display: none; }
+.wd-video { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 4px 10px; font-size: 15px; font-weight: 700; color: var(--text-2); overflow-wrap: anywhere; }
+.wd-video .link-btn { min-height: 36px; padding: 6px; }
 :root[data-theme="dark"] .spin-btn:not(:disabled) { box-shadow: 0 0 44px rgba(163, 8, 163, .65), inset 0 -5px 0 rgba(42, 0, 42, .45), inset 0 2px 0 rgba(255, 255, 255, .25); }
 .event-exit { display: none; }
 
@@ -753,6 +758,11 @@ html[data-app="guest"] #signup { position: static; min-height: 100vh; min-height
 .sync-pill[data-state="connecting"] .sp-dot, .sync-pill[data-state="reconnecting"] .sp-dot { background: var(--brand-500); animation: bootPulse .8s ease-in-out infinite alternate; }
 .sync-pill[data-state="reconnecting"] { border-style: dashed; }
 .sync-pill[data-state="loggedout"] { border-color: var(--danger); color: var(--danger); }
+.sync-pill[data-state="closed"] .sp-dot { background: transparent; box-shadow: inset 0 0 0 2px var(--text-2); }
+/* "Close entries" turns into a filled "Reopen entries" while entries are closed, so the state is obvious. */
+.btn-entries.is-closed { background: var(--brand-600); border-color: var(--brand-600); color: #fff; }
+.btn-entries.is-closed:hover:not(:disabled) { filter: brightness(1.08); }
+.stage-info .si-closed { color: var(--accent-ink); }
 .sync-pill[data-state="loggedout"] .sp-dot { background: var(--danger); }
 .panel-top .sync-pill { display: none; height: 40px; padding: 0 12px; font-size: 13px; }
 .srv-banner { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 6px 10px; padding: 10px 16px; background: color-mix(in srgb, var(--brand-600) 10%, var(--surface)); color: var(--text); font-weight: 700; font-size: 15px; text-align: center; border-bottom: 1px solid var(--line); }
@@ -919,6 +929,8 @@ body.event-mode .ev-chip { display: none; }
   <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol>
   <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
   <symbol id="i-lock" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></symbol>
+  <symbol id="i-unlock" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></symbol>
+  <symbol id="i-rec" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4" fill="currentColor"/></symbol>
   <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></symbol>
   <symbol id="i-external" viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14 21 3"/></symbol>
   <symbol id="i-spark" viewBox="0 0 24 24"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M19 17l.8 2.2L22 20l-2.2.8L19 23l-.8-2.2L16 20l2.2-.8z"/></symbol>
@@ -995,6 +1007,7 @@ body.event-mode .ev-chip { display: none; }
         </div>
         <p class="prize-display" id="prizeDisplay"></p>
         <button type="button" class="spin-btn" id="spinBtn" disabled>SPIN</button>
+        <button type="button" class="btn btn-secondary btn-lg record-btn" id="recordBtn" disabled title="Spin, and get an MP4 video of it for an LED screen"><svg class="ic ic-sm" aria-hidden="true"><use href="#i-rec"/></svg>Record spin (MP4)</button>
       </div>
       <button type="button" class="event-exit" id="eventExit" title="Exit event mode (Esc)"><svg class="ic ic-sm" aria-hidden="true"><use href="#i-minimize"/></svg><span class="ev-label">Exit event mode</span></button>
     </section>
@@ -1005,6 +1018,7 @@ body.event-mode .ev-chip { display: none; }
         <button type="button" class="ev-chip" hidden><span class="draw-badge" hidden></span><span class="ev-chip-text"><span class="ev-chip-name"></span><span class="ev-chip-date"></span></span></button>
         <button type="button" class="sync-pill" data-state="connecting" hidden><span class="sp-dot" aria-hidden="true"></span><span class="sp-text">Phone sign-ups: connecting…</span></button>
         <div class="panel-actions">
+          <button type="button" class="btn btn-secondary btn-excel btn-entries" data-action="toggle-entries"><svg class="ic ic-sm" aria-hidden="true"><use href="#i-lock"/></svg><span class="be-text">Close entries</span></button>
           <button type="button" class="btn btn-secondary btn-excel" data-action="xlsx"><svg class="ic ic-sm" aria-hidden="true"><use href="#i-sheet"/></svg>Download Excel (.xlsx)</button>
           <button type="button" class="btn btn-danger btn-excel" data-action="new-event" data-lock><svg class="ic ic-sm" aria-hidden="true"><use href="#i-restart"/></svg>New event</button>
         </div>
@@ -1420,6 +1434,7 @@ body.event-mode .ev-chip { display: none; }
       <button type="button" class="btn btn-secondary btn-lg" data-wd="keep">Keep on wheel</button>
       <button type="button" class="btn btn-ghost btn-lg" data-wd="noshow">No-show — draw again</button>
     </div>
+    <p class="wd-video" id="wdVideo" hidden><svg class="ic ic-sm" aria-hidden="true"><use href="#i-rec"/></svg><span id="wdVideoText"></span><button type="button" class="link-btn" id="wdVideoAgain" hidden>Download again</button><button type="button" class="link-btn" id="wdVideoStop" hidden>Cancel</button></p>
     <p class="wd-hint" id="wdHint"></p>
   </div>
 </dialog>
@@ -1639,7 +1654,9 @@ const DEFAULTS = Object.freeze({
   // Name, phone number and email are always required (no settings for it): older saved "requireNumber" /
   // "requireEmail" values are not in DEFAULTS, so cleanSettings() drops them.
   theme: 'light', palette: 'duo', labels: 'full', privacy: true, blockDuplicates: true,
-  consentText: DEFAULT_CONSENT, showMarketing: true, marketingText: DEFAULT_MARKETING, pin: ''
+  consentText: DEFAULT_CONSENT, showMarketing: true, marketingText: DEFAULT_MARKETING, pin: '',
+  // Offline app: "Close entries" (on a draw the server's sign-ups switch is used instead, see entriesClosed)
+  entriesOpen: true
 });
 const STATUSES = ['active', 'won', 'removed'];
 // "phone": signed up on their own phone through api.php on the organiser's web server (SPEC 2.15).
@@ -2234,33 +2251,32 @@ function requestWheelRebuild() {
 }
 function applyRotation() { canvas.style.transform = `rotate(${rot}rad)`; }
 
-/** Longest prefix of `text` + "…" that fits maxW with the current ctx.font. */
-function truncateTo(text, maxW) {
+/** Longest prefix of `text` + "…" that fits maxW with the current font of x (the wheel's canvas by default). */
+function truncateTo(text, maxW, x = ctx) {
   const chars = Array.from(text);
   let lo = 0, hi = chars.length;
   while (lo < hi) {
     const mid = (lo + hi + 1) >> 1;
-    if (ctx.measureText(chars.slice(0, mid).join('').trimEnd() + '…').width <= maxW) lo = mid; else hi = mid - 1;
+    if (x.measureText(chars.slice(0, mid).join('').trimEnd() + '…').width <= maxW) lo = mid; else hi = mid - 1;
   }
   return lo ? chars.slice(0, lo).join('').trimEnd() + '…' : '';
 }
 /** Fit a label: shrink (down to 62%) before truncating so full names stay readable. */
-function fitLabel(text, fs, maxW, noShrink) {
-  ctx.font = `700 ${fs}px ${FONT}`;
-  const w0 = ctx.measureText(text).width;
+function fitLabel(text, fs, maxW, noShrink, x = ctx) {
+  x.font = `700 ${fs}px ${FONT}`;
+  const w0 = x.measureText(text).width;
   if (w0 <= maxW) return { text, fs };
-  if (noShrink) return { text: truncateTo(text, maxW), fs };
+  if (noShrink) return { text: truncateTo(text, maxW, x), fs };
   const fs2 = Math.max(Math.min(fs, 9), fs * 0.62, fs * (maxW / w0) * 0.99);
-  ctx.font = `700 ${fs2}px ${FONT}`;
-  if (ctx.measureText(text).width <= maxW) return { text, fs: fs2 };
-  return { text: truncateTo(text, maxW), fs: fs2 };
+  x.font = `700 ${fs2}px ${FONT}`;
+  if (x.measureText(text).width <= maxW) return { text, fs: fs2 };
+  return { text: truncateTo(text, maxW, x), fs: fs2 };
 }
 
 function drawWheel() {
   const Sz = wheelSize;
   if (!Sz) return;
   const dark = isDark();
-  const n = wheelEntries.length;
   const sig = [Sz, window.devicePixelRatio, dark, S().palette, S().labels, wheelEntries.map(e => e.id + ':' + e.weight + ':' + e.name).join('|')].join('#');
   if (sig === drawnSig) return;
   drawnSig = sig;
@@ -2269,53 +2285,60 @@ function drawWheel() {
   if (canvas.width !== px || canvas.height !== px) { canvas.width = px; canvas.height = px; }
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, Sz, Sz);
+  wheelFills = paintWheel(ctx, Sz, wheelEntries, wheelSegs, dark);
+}
+/** Paints a wheel of size Sz (rim, wedges, dividers, labels, shading) on the canvas context x, at its current
+    transform; also used for the recorded video's wheel. Returns the segments' fill colours. */
+function paintWheel(x, Sz, entries, segs, dark) {
+  const n = entries.length;
+  let fills = [];
   const c = Sz / 2;
   const R = Sz / 2 - 0.5;
   const rim = Math.max(8, Sz * 0.052);
   const Rs = R - rim;
 
   // Rim ring (brand purple with a soft bevel)
-  const g = ctx.createRadialGradient(c, c, Rs, c, c, R);
+  const g = x.createRadialGradient(c, c, Rs, c, c, R);
   g.addColorStop(0, '#3d003d');
   g.addColorStop(0.28, '#8a0a8a');
   g.addColorStop(0.62, '#6e006e');
   g.addColorStop(1, '#420042');
-  ctx.beginPath();
-  ctx.arc(c, c, R, 0, TAU);
-  ctx.arc(c, c, Rs, 0, TAU, true);
-  ctx.fillStyle = g;
-  ctx.fill();
+  x.beginPath();
+  x.arc(c, c, R, 0, TAU);
+  x.arc(c, c, Rs, 0, TAU, true);
+  x.fillStyle = g;
+  x.fill();
 
-  ctx.save();
-  ctx.translate(c, c);
+  x.save();
+  x.translate(c, c);
   if (!n) {
     const k = 16;
     const a = dark ? ['#1c0a1c', '#2c0f2c'] : ['#f7e6f7', '#efd3ef'];
     for (let i = 0; i < k; i++) {
-      ctx.beginPath(); ctx.moveTo(0, 0);
-      ctx.arc(0, 0, Rs, (i / k) * TAU - Math.PI / 2, ((i + 1) / k) * TAU - Math.PI / 2);
-      ctx.closePath(); ctx.fillStyle = a[i % 2]; ctx.fill();
+      x.beginPath(); x.moveTo(0, 0);
+      x.arc(0, 0, Rs, (i / k) * TAU - Math.PI / 2, ((i + 1) / k) * TAU - Math.PI / 2);
+      x.closePath(); x.fillStyle = a[i % 2]; x.fill();
     }
   } else {
-    wheelFills = segmentFills(n, S().palette);
+    fills = segmentFills(n, S().palette);
     for (let i = 0; i < n; i++) {
-      const s = wheelSegs[i];
-      ctx.beginPath();
-      if (n === 1) ctx.arc(0, 0, Rs, 0, TAU);
-      else { ctx.moveTo(0, 0); ctx.arc(0, 0, Rs, s.start - Math.PI / 2, s.end - Math.PI / 2); ctx.closePath(); }
-      ctx.fillStyle = wheelFills[i];
-      ctx.fill();
+      const s = segs[i];
+      x.beginPath();
+      if (n === 1) x.arc(0, 0, Rs, 0, TAU);
+      else { x.moveTo(0, 0); x.arc(0, 0, Rs, s.start - Math.PI / 2, s.end - Math.PI / 2); x.closePath(); }
+      x.fillStyle = fills[i];
+      x.fill();
     }
     if (n > 1 && n <= 300) {
-      ctx.strokeStyle = 'rgba(255,255,255,.5)';
-      ctx.lineWidth = n > 90 ? 0.6 : Math.max(1, Sz * 0.0028);
-      ctx.beginPath();
-      for (const s of wheelSegs) {
+      x.strokeStyle = 'rgba(255,255,255,.5)';
+      x.lineWidth = n > 90 ? 0.6 : Math.max(1, Sz * 0.0028);
+      x.beginPath();
+      for (const s of segs) {
         const a = s.start - Math.PI / 2;
-        ctx.moveTo(0, 0);
-        ctx.lineTo(Math.cos(a) * Rs, Math.sin(a) * Rs);
+        x.moveTo(0, 0);
+        x.lineTo(Math.cos(a) * Rs, Math.sin(a) * Rs);
       }
-      ctx.stroke();
+      x.stroke();
     }
     // Labels: radial, bold, sized to the segment, truncated with an ellipsis, hidden when too thin.
     const hubR = Math.max(Sz * 0.32, Math.min(120, Sz * 0.4)) / 2; // the hub (CSS --hub)
@@ -2323,61 +2346,62 @@ function drawWheel() {
     const inner = hubR + Sz * 0.02;
     const maxLen = outer - inner;
     const baseFs = clamp(Sz * 0.046, 11, 44);
-    ctx.textBaseline = 'middle';
+    x.textBaseline = 'middle';
     // Pass 1: each segment's base size (from its width) and how much its label must shrink to fit.
     const rRef = inner + maxLen * 0.55;
     const bases = new Array(n);
     let common = 1;
     for (let i = 0; i < n && n > 1; i++) {
-      const span = wheelSegs[i].end - wheelSegs[i].start;
+      const span = segs[i].end - segs[i].start;
       const fs = Math.min(baseFs, 2 * rRef * Math.sin(Math.min(span, Math.PI) / 2) * 0.66);
       bases[i] = fs;
       if (fs < 8) continue;
-      ctx.font = `700 ${fs}px ${FONT}`;
-      const w = ctx.measureText(wheelLabel(wheelEntries[i])).width;
+      x.font = `700 ${fs}px ${FONT}`;
+      const w = x.measureText(wheelLabel(entries[i])).width;
       if (w > maxLen) common = Math.min(common, maxLen / w);
     }
     // One shared scale (never below 62%) keeps equal segments' labels the same size; the rest truncate.
     common = Math.max(0.62, common);
     for (let i = 0; i < n; i++) {
-      const s = wheelSegs[i];
+      const s = segs[i];
       const span = s.end - s.start;
-      const label = wheelLabel(wheelEntries[i]);
+      const label = wheelLabel(entries[i]);
       if (!label) continue;
-      ctx.fillStyle = labelColour(wheelFills[i]);
+      x.fillStyle = labelColour(fills[i]);
       // RTL names are laid out right-to-left, so a truncated one ends in "…" at its logical end (towards the hub).
       if (n === 1) {
-        ctx.save();
-        ctx.direction = isRtl(label) ? 'rtl' : 'ltr';
-        ctx.textAlign = 'center';
-        const fit = fitLabel(label, baseFs * 1.25, Rs * 1.3);
-        ctx.font = `700 ${fit.fs}px ${FONT}`;
-        ctx.fillText(fit.text, 0, -Rs * 0.56);
-        ctx.restore();
+        x.save();
+        x.direction = isRtl(label) ? 'rtl' : 'ltr';
+        x.textAlign = 'center';
+        const fit = fitLabel(label, baseFs * 1.25, Rs * 1.3, false, x);
+        x.font = `700 ${fit.fs}px ${FONT}`;
+        x.fillText(fit.text, 0, -Rs * 0.56);
+        x.restore();
         continue;
       }
       if (bases[i] < 8) continue;
       const fs = Math.max(8, bases[i] * common);
-      const fit = fitLabel(label, fs, maxLen, true);
+      const fit = fitLabel(label, fs, maxLen, true, x);
       if (!fit.text) continue;
-      ctx.save();
-      ctx.rotate(s.start + span / 2 - Math.PI / 2);
-      ctx.direction = isRtl(label) ? 'rtl' : 'ltr';
-      ctx.textAlign = 'right';
-      ctx.font = `700 ${fit.fs}px ${FONT}`;
-      ctx.fillText(fit.text, outer, 0);
-      ctx.restore();
+      x.save();
+      x.rotate(s.start + span / 2 - Math.PI / 2);
+      x.direction = isRtl(label) ? 'rtl' : 'ltr';
+      x.textAlign = 'right';
+      x.font = `700 ${fit.fs}px ${FONT}`;
+      x.fillText(fit.text, outer, 0);
+      x.restore();
     }
   }
   // Inner shading towards the rim for depth
-  const sh = ctx.createRadialGradient(0, 0, Rs * 0.82, 0, 0, Rs);
+  const sh = x.createRadialGradient(0, 0, Rs * 0.82, 0, 0, Rs);
   sh.addColorStop(0, 'rgba(0,0,0,0)');
   sh.addColorStop(1, 'rgba(20,0,20,.22)');
-  ctx.beginPath(); ctx.arc(0, 0, Rs, 0, TAU); ctx.fillStyle = sh; ctx.fill();
-  ctx.lineWidth = Math.max(1, Sz * 0.004);
-  ctx.strokeStyle = 'rgba(255,255,255,.35)';
-  ctx.beginPath(); ctx.arc(0, 0, Rs, 0, TAU); ctx.stroke();
-  ctx.restore();
+  x.beginPath(); x.arc(0, 0, Rs, 0, TAU); x.fillStyle = sh; x.fill();
+  x.lineWidth = Math.max(1, Sz * 0.004);
+  x.strokeStyle = 'rgba(255,255,255,.35)';
+  x.beginPath(); x.arc(0, 0, Rs, 0, TAU); x.stroke();
+  x.restore();
+  return fills;
 }
 /* Rim bulbs: slow twinkle at rest ("idle"), a chase that runs at wheel speed while spinning ("chase"),
    and all flashing together when the wheel lands ("party"). */
@@ -2511,8 +2535,19 @@ let winnerOpen = false;   // a winner is being revealed or shown: the wheel stay
 let currentWin = null;
 let drawRound = 0;        // round of the draw in progress; written to state only when the wheel lands
 let revealTimer = 0;
+let videoJob = null;      // "Record spin": { logId, name, state: 'making' | 'ready' | 'failed', pct, blob, stop }
 const reduceMQ = window.matchMedia('(prefers-reduced-motion: reduce)');
 const easeOutQuart = p => 1 - Math.pow(1 - p, 4);
+/** The wheel's rotation (rad, clockwise) el ms into a spin { from, delta, duration, wind, windAmt }: a short pull-back,
+    then easing out onto exactly from + delta. Shared by the live spin and the recorded video. */
+function spinRotation(plan, el) {
+  const { from, delta, duration, wind, windAmt } = plan;
+  if (el <= 0) return from;
+  if (el < wind) return from - windAmt * Math.sin((el / wind) * (Math.PI / 2));
+  const p = Math.min(1, (el - wind) / Math.max(1, duration - wind));
+  const start = from - windAmt;
+  return start + (from + delta - start) * easeOutQuart(p);
+}
 
 /* Pointer: a damped spring, kicked harder the faster the segment boundaries pass. */
 const ptr = { a: 0, v: 0 };
@@ -2594,19 +2629,17 @@ function spinNow(opts, pick = null) {
   // 3) a short wind-up (pull back) before the launch; the landing is still exactly from + delta
   const wind = reduce ? 0 : Math.min(320, duration * 0.06);
   const windAmt = reduce ? 0 : 0.11;
-  const rotationAt = el => {
-    if (el <= 0) return from;
-    if (el < wind) return from - windAmt * Math.sin((el / wind) * (Math.PI / 2));
-    const p = Math.min(1, (el - wind) / Math.max(1, duration - wind));
-    const start = from - windAmt;
-    return start + (from + delta - start) * easeOutQuart(p);
-  };
+  const plan = { from, delta, duration, wind, windAmt };
+  const rotationAt = el => spinRotation(plan, el);
+  // "Record spin": what the video needs to show this very draw (the frozen wheel, where it lands, round and prize).
+  const recording = opts.record ? { setup: opts.record, from, target, winIdx, entries, segs: wheelSegs, redraw: !!opts.redraw } : null;
 
   spinning = true;
   let round, prize;
   if (opts.redraw) { round = opts.redraw.round; prize = opts.redraw.prize; }
   else { round = state.meta.round + 1; prize = cleanLine(S().prize); }
   drawRound = round;
+  if (recording) Object.assign(recording, { round, prize });
   clearSpotlight();
   wheelEl.classList.add('is-spinning');
   setBulbMode(reduce ? 'idle' : 'chase');
@@ -2634,6 +2667,10 @@ function spinNow(opts, pick = null) {
       wheelEl.classList.remove('is-spinning');
       const entry = entries[winIdx];
       onLanded(entry, round, prize, winIdx, !!opts.redraw);
+      if (recording) {
+        if (currentWin) currentWin.recorded = true; // a no-show redraw of this winner is recorded too
+        startSpinVideo(recording, entry, currentWin ? currentWin.rec.id : '');
+      }
       resolve(JSON.parse(JSON.stringify(entry)));
     };
     const step = now => {
@@ -2732,18 +2769,20 @@ function envTone(ac, { type = 'sine', f, f2, t, dur, gain = 0.2, attack = 0.005,
 }
 function playTick() {
   const ac = audioContext();
-  if (!ac) return;
-  const t = ac.currentTime + 0.001;
-  envTone(ac, { type: 'triangle', f: 2300, f2: 900, t, dur: 0.035, gain: 0.22, attack: 0.002 });
-  envTone(ac, { type: 'square', f: 180, t, dur: 0.018, gain: 0.05, attack: 0.001 });
+  if (ac) tickAt(ac, ac.currentTime + 0.001, master);
+}
+function tickAt(ac, t, dest) {
+  envTone(ac, { type: 'triangle', f: 2300, f2: 900, t, dur: 0.035, gain: 0.22, attack: 0.002, dest });
+  envTone(ac, { type: 'square', f: 180, t, dur: 0.018, gain: 0.05, attack: 0.001, dest });
 }
 function playFanfare() {
   const ac = audioContext();
-  if (!ac) return;
-  const t0 = ac.currentTime + 0.03;
+  if (ac) fanfareAt(ac, ac.currentTime + 0.03, master);
+}
+function fanfareAt(ac, t0, dest) {
   const lp = ac.createBiquadFilter();
   lp.type = 'lowpass'; lp.frequency.value = 2800; lp.Q.value = 0.7;
-  lp.connect(master);
+  lp.connect(dest);
   const brass = (f, t, d, gain = 0.12) => {
     for (const det of [-7, 7]) envTone(ac, { type: 'sawtooth', f, t, dur: d, gain, attack: 0.025, dest: lp, detune: det });
     envTone(ac, { type: 'triangle', f: f / 2, t, dur: d, gain: gain * 0.8, attack: 0.02, dest: lp });
@@ -2751,7 +2790,627 @@ function playFanfare() {
   // Da-da-da-DAAA (C E G C) + a bright chord and a sparkle
   brass(523.25, t0, 0.16); brass(659.25, t0 + 0.14, 0.16); brass(783.99, t0 + 0.28, 0.16);
   brass(1046.5, t0 + 0.42, 1.1, 0.13); brass(659.25, t0 + 0.42, 1.1, 0.07); brass(783.99, t0 + 0.42, 1.1, 0.07);
-  [1568, 2093, 2637, 3136, 4186].forEach((f, i) => envTone(ac, { type: 'sine', f, t: t0 + 0.62 + i * 0.07, dur: 0.5, gain: 0.05, attack: 0.004 }));
+  [1568, 2093, 2637, 3136, 4186].forEach((f, i) => envTone(ac, { type: 'sine', f, t: t0 + 0.62 + i * 0.07, dur: 0.5, gain: 0.05, attack: 0.004, dest }));
+}
+
+/* ---------------------------------------------------------------------
+   6b. Record spin: an MP4 of a draw for an LED screen (when the laptop's screen can't be shown). The spin is a real
+   draw, exactly as SPIN; the video is then made frame by frame from that draw (the same wheel, landing on the same
+   winner, then the winner card), at 1080p when the browser can, with the ticks and fanfare when it can make AAC
+   sound. WebCodecs H.264 + the small MP4 writer below: no libraries, nothing leaves the laptop.
+   --------------------------------------------------------------------- */
+/**
+ * A small MP4 (ISO BMFF) writer: one H.264 video track and an optional AAC audio track, "moov" first so players can
+ * start at once, samples interleaved in chunks of about a second. No dependencies.
+ * video: { width, height, fps, description: avcC bytes, samples: [{ data, pts (µs), key }] } in decode order.
+ * audio: null or { sampleRate, channels, description: AudioSpecificConfig bytes, samples: [{ data }] } (1024 frames each).
+ * Returns the file as a Uint8Array.
+ */
+function mp4Mux({ video, audio = null }) {
+  const enc = new TextEncoder();
+  const u8 = (...a) => new Uint8Array(a);
+  const u16 = n => u8((n >>> 8) & 255, n & 255);
+  const u24 = n => u8((n >>> 16) & 255, (n >>> 8) & 255, n & 255);
+  const u32 = n => u8((n >>> 24) & 255, (n >>> 16) & 255, (n >>> 8) & 255, n & 255);
+  const i32 = n => u32(n >>> 0);
+  const str = s => enc.encode(s);
+  const zeros = n => new Uint8Array(n);
+  const cat = parts => {
+    let len = 0;
+    for (const p of parts) len += p.length;
+    const out = new Uint8Array(len);
+    let o = 0;
+    for (const p of parts) { out.set(p, o); o += p.length; }
+    return out;
+  };
+  const box = (type, ...parts) => { const body = cat(parts.flat(Infinity)); return cat([u32(body.length + 8), str(type), body]); };
+  const full = (type, version, flags, ...parts) => box(type, u8(version), u24(flags), ...parts);
+  const MATRIX = cat([u32(0x10000), u32(0), u32(0), u32(0), u32(0x10000), u32(0), u32(0), u32(0), u32(0x40000000)]);
+  const runs = list => { // [[count, value]] for equal neighbours
+    const out = [];
+    for (const v of list) {
+      const last = out[out.length - 1];
+      if (last && last[1] === v) last[0]++;
+      else out.push([1, v]);
+    }
+    return out;
+  };
+
+  // ---- video timing: 90 kHz; decode times are the presentation times in order, delayed when frames are reordered
+  const VTS = 90000;
+  const vs = video.samples;
+  const toTs = us => Math.round(us * VTS / 1e6);
+  const frameDur = Math.round(VTS / video.fps);
+  const pts = vs.map(s => toTs(s.pts));
+  const sorted = pts.slice().sort((a, b) => a - b);
+  let delay = 0;
+  for (let i = 0; i < pts.length; i++) delay = Math.max(delay, sorted[i] - pts[i]);
+  const dts = sorted.map(t => t - delay);
+  const vDur = vs.map((s, i) => (i + 1 < vs.length ? dts[i + 1] - dts[i] : frameDur));
+  const ctts = pts.map((p, i) => p - dts[i]);
+  const reordered = ctts.some(c => c !== 0);
+  const vMediaDur = sorted.length ? sorted[sorted.length - 1] - sorted[0] + frameDur : 0;
+
+  // ---- audio timing: its own sample rate, 1024 frames per AAC packet
+  const as = audio ? audio.samples : [];
+  const aDurTotal = as.length * 1024;
+
+  // ---- chunks of about a second, interleaved by time
+  const chunks = []; // { track: 'v' | 'a', first, count, time }
+  const chunkUp = (n, timeOf, track, span) => {
+    let start = 0;
+    while (start < n) {
+      let end = start + 1;
+      while (end < n && timeOf(end) - timeOf(start) < span) end++;
+      chunks.push({ track, first: start, count: end - start, time: timeOf(start) });
+      start = end;
+    }
+  };
+  chunkUp(vs.length, i => dts[i] / VTS, 'v', 1);
+  if (audio) chunkUp(as.length, i => (i * 1024) / audio.sampleRate, 'a', 1);
+  chunks.sort((a, b) => a.time - b.time || (a.track === 'v' ? -1 : 1));
+
+  const movieDurMs = Math.round(Math.max(vMediaDur / VTS, audio ? aDurTotal / audio.sampleRate : 0) * 1000);
+
+  const stscBox = list => { // runs of samples-per-chunk
+    const entries = [];
+    list.forEach((c, i) => { if (!entries.length || entries[entries.length - 1][1] !== c.count) entries.push([i + 1, c.count]); });
+    return full('stsc', 0, 0, u32(entries.length), entries.map(([first, n]) => cat([u32(first), u32(n), u32(1)])));
+  };
+  const stcoBox = offsets => full('stco', 0, 0, u32(offsets.length), offsets.map(u32));
+  const dinf = () => box('dinf', full('dref', 0, 0, u32(1), full('url ', 0, 1)));
+
+  const build = (vOffsets, aOffsets) => {
+    const vChunks = chunks.filter(c => c.track === 'v');
+    const aChunks = chunks.filter(c => c.track === 'a');
+    const avc1 = box('avc1', zeros(6), u16(1), zeros(16), u16(video.width), u16(video.height),
+      u32(0x480000), u32(0x480000), u32(0), u16(1), zeros(32), u16(0x18), u16(0xffff),
+      box('avcC', new Uint8Array(video.description)));
+    const vStbl = box('stbl',
+      full('stsd', 0, 0, u32(1), avc1),
+      full('stts', 0, 0, (() => { const r = runs(vDur); return [u32(r.length), r.map(([n, d]) => cat([u32(n), u32(d)]))]; })()),
+      reordered ? full('ctts', 0, 0, (() => { const r = runs(ctts); return [u32(r.length), r.map(([n, d]) => cat([u32(n), u32(d)]))]; })()) : [],
+      full('stss', 0, 0, (() => { const k = []; vs.forEach((s, i) => { if (s.key) k.push(i + 1); }); return [u32(k.length), k.map(u32)]; })()),
+      stscBox(vChunks),
+      full('stsz', 0, 0, u32(0), u32(vs.length), vs.map(s => u32(s.data.byteLength))),
+      stcoBox(vOffsets));
+    const vTrak = box('trak',
+      full('tkhd', 0, 3, u32(0), u32(0), u32(1), u32(0), u32(Math.round(vMediaDur / VTS * 1000)), zeros(8), u16(0), u16(0), u16(0), u16(0), MATRIX, u32(video.width << 16), u32(video.height << 16)),
+      // reordered frames start "delay" late: the edit list shows the movie from the first frame
+      reordered ? box('edts', full('elst', 0, 0, u32(1), u32(Math.round(vMediaDur / VTS * 1000)), i32(delay), u16(1), u16(0))) : [],
+      box('mdia',
+        full('mdhd', 0, 0, u32(0), u32(0), u32(VTS), u32(vMediaDur + delay), u16(0x55c4), u16(0)),
+        full('hdlr', 0, 0, u32(0), str('vide'), zeros(12), str('VideoHandler\0')),
+        box('minf', full('vmhd', 0, 1, zeros(8)), dinf(), vStbl)));
+    let aTrak = [];
+    if (audio) {
+      const asc = new Uint8Array(audio.description);
+      const desc = (tag, body) => cat([u8(tag, 0x80, 0x80, 0x80, body.length), body]);
+      const esds = full('esds', 0, 0, desc(3, cat([u16(2), u8(0),
+        desc(4, cat([u8(0x40, 0x15), u24(0), u32(192000), u32(128000), desc(5, asc)])),
+        desc(6, u8(2))])));
+      const mp4a = box('mp4a', zeros(6), u16(1), zeros(8), u16(audio.channels), u16(16), u16(0), u16(0), u32(audio.sampleRate << 16), esds);
+      const aStbl = box('stbl',
+        full('stsd', 0, 0, u32(1), mp4a),
+        full('stts', 0, 0, u32(1), u32(as.length), u32(1024)),
+        stscBox(aChunks),
+        full('stsz', 0, 0, u32(0), u32(as.length), as.map(s => u32(s.data.byteLength))),
+        stcoBox(aOffsets));
+      aTrak = box('trak',
+        full('tkhd', 0, 3, u32(0), u32(0), u32(2), u32(0), u32(Math.round(aDurTotal / audio.sampleRate * 1000)), zeros(8), u16(0), u16(1), u16(0x100), u16(0), MATRIX, u32(0), u32(0)),
+        box('mdia',
+          full('mdhd', 0, 0, u32(0), u32(0), u32(audio.sampleRate), u32(aDurTotal), u16(0x55c4), u16(0)),
+          full('hdlr', 0, 0, u32(0), str('soun'), zeros(12), str('SoundHandler\0')),
+          box('minf', full('smhd', 0, 0, u16(0), u16(0)), dinf(), aStbl)));
+    }
+    const moov = box('moov',
+      full('mvhd', 0, 0, u32(0), u32(0), u32(1000), u32(movieDurMs), u32(0x10000), u16(0x100), zeros(10), MATRIX, zeros(24), u32(audio ? 3 : 2)),
+      vTrak, aTrak);
+    return moov;
+  };
+
+  const ftyp = box('ftyp', str('isom'), u32(0x200), str('isom'), str('iso2'), str('avc1'), str('mp41'));
+  const nV = chunks.filter(c => c.track === 'v').length;
+  const nA = chunks.filter(c => c.track === 'a').length;
+  // moov's size doesn't depend on the offsets' values: size it once, then fill them in
+  const moovSize = build(new Array(nV).fill(0), new Array(nA).fill(0)).length;
+  let mdatSize = 8;
+  for (const s of vs) mdatSize += s.data.byteLength;
+  for (const s of as) mdatSize += s.data.byteLength;
+  let off = ftyp.length + moovSize + 8;
+  const vOffsets = [], aOffsets = [];
+  for (const c of chunks) {
+    (c.track === 'v' ? vOffsets : aOffsets).push(off);
+    const list = c.track === 'v' ? vs : as;
+    for (let i = c.first; i < c.first + c.count; i++) off += list[i].data.byteLength;
+  }
+  const moov = build(vOffsets, aOffsets);
+  const out = new Uint8Array(ftyp.length + moov.length + mdatSize);
+  let o = 0;
+  out.set(ftyp, o); o += ftyp.length;
+  out.set(moov, o); o += moov.length;
+  out.set(u32(mdatSize), o); out.set(str('mdat'), o + 4); o += 8;
+  for (const c of chunks) {
+    const list = c.track === 'v' ? vs : as;
+    for (let i = c.first; i < c.first + c.count; i++) { out.set(new Uint8Array(list[i].data), o); o += list[i].data.byteLength; }
+  }
+  return out;
+}
+/** The first H.264 set-up this browser can encode: 1080p at 60 frames a second if it can, else 30, else 720p. */
+async function pickH264() {
+  if (typeof VideoEncoder === 'undefined' || typeof VideoFrame === 'undefined') return null;
+  const tries = [
+    [1920, 1080, 60, 'avc1.64002a'], [1920, 1080, 60, 'avc1.4d002a'],
+    [1920, 1080, 30, 'avc1.640028'], [1920, 1080, 30, 'avc1.4d0028'], [1920, 1080, 30, 'avc1.42e028'],
+    [1280, 720, 30, 'avc1.4d001f'], [1280, 720, 30, 'avc1.42e01f']
+  ];
+  for (const [width, height, fps, codec] of tries) {
+    const config = { codec, width, height, framerate: fps, bitrate: width >= 1920 ? (fps > 30 ? 16e6 : 10e6) : 6e6, avc: { format: 'avc' } };
+    try { if ((await VideoEncoder.isConfigSupported(config)).supported) return { config, width, height, fps }; } catch (e) { /* next */ }
+  }
+  return null;
+}
+/** Encodes frames drawn by draw(ctx, i) on a width × height canvas: { description, samples } for mp4Mux.
+    onProgress(0..1); shouldStop() → true cancels (returns null); shouldPause() → true waits. */
+async function encodeH264(setup, frameCount, draw, { onProgress = () => {}, shouldStop = () => false, shouldPause = () => false } = {}) {
+  const { config, width, height, fps } = setup;
+  const canvas = typeof OffscreenCanvas !== 'undefined' ? new OffscreenCanvas(width, height) : Object.assign(document.createElement('canvas'), { width, height });
+  const ctx = canvas.getContext('2d', { alpha: false });
+  const samples = [];
+  let description = null, failed = null;
+  const encoder = new VideoEncoder({
+    output: (chunk, meta) => {
+      if (meta && meta.decoderConfig && meta.decoderConfig.description) description = new Uint8Array(meta.decoderConfig.description);
+      const data = new Uint8Array(chunk.byteLength);
+      chunk.copyTo(data);
+      samples.push({ data, pts: chunk.timestamp, key: chunk.type === 'key' });
+    },
+    error: e => { failed = e; }
+  });
+  try {
+    encoder.configure(config);
+    for (let i = 0; i < frameCount; i++) {
+      if (failed || shouldStop()) break;
+      while (shouldPause() && !shouldStop()) await new Promise(r => setTimeout(r, 120));
+      draw(ctx, i);
+      const frame = new VideoFrame(canvas, { timestamp: Math.round(i * 1e6 / fps), duration: Math.round(1e6 / fps) });
+      encoder.encode(frame, { keyFrame: i % (fps * 2) === 0 }); // a key frame every 2 s
+      frame.close();
+      // Don't run ahead of the encoder (memory), and let the page breathe.
+      while (encoder.encodeQueueSize > 4 && !failed) await new Promise(r => setTimeout(r, 4));
+      if (i % 10 === 0) { onProgress(i / frameCount); await new Promise(r => setTimeout(r, 0)); }
+    }
+    if (!failed && !shouldStop()) await encoder.flush();
+  } catch (e) {
+    failed = failed || e;
+  } finally {
+    try { encoder.close(); } catch (e) { /* closed already */ }
+  }
+  if (failed) throw failed;
+  if (shouldStop() || !description) return null;
+  onProgress(1);
+  return { description, samples };
+}
+/** AAC-LC for the video's sound track (WebCodecs AudioEncoder): { sampleRate, channels, description, samples } for
+    mp4Mux, or null when this browser can't make AAC (the video is then silent). buffer: an AudioBuffer. */
+async function encodeAac(buffer) {
+  if (typeof AudioEncoder === 'undefined' || typeof AudioData === 'undefined') return null;
+  const sampleRate = buffer.sampleRate, channels = Math.min(2, buffer.numberOfChannels);
+  const config = { codec: 'mp4a.40.2', sampleRate, numberOfChannels: channels, bitrate: 128000 };
+  try { if (!(await AudioEncoder.isConfigSupported(config)).supported) return null; } catch (e) { return null; }
+  const samples = [];
+  let description = null, failed = null;
+  const encoder = new AudioEncoder({
+    output: (chunk, meta) => {
+      if (meta && meta.decoderConfig && meta.decoderConfig.description) description = new Uint8Array(meta.decoderConfig.description);
+      const data = new Uint8Array(chunk.byteLength);
+      chunk.copyTo(data);
+      samples.push({ data });
+    },
+    error: e => { failed = e; }
+  });
+  try {
+    encoder.configure(config);
+    const STEP = 4096; // frames per AudioData
+    for (let start = 0; start < buffer.length && !failed; start += STEP) {
+      const n = Math.min(STEP, buffer.length - start);
+      const planar = new Float32Array(n * channels);
+      for (let c = 0; c < channels; c++) planar.set(buffer.getChannelData(c).subarray(start, start + n), c * n);
+      const data = new AudioData({ format: 'f32-planar', sampleRate, numberOfFrames: n, numberOfChannels: channels, timestamp: Math.round(start * 1e6 / sampleRate), data: planar });
+      encoder.encode(data);
+      data.close();
+    }
+    await encoder.flush();
+  } catch (e) {
+    failed = failed || e;
+  } finally {
+    try { encoder.close(); } catch (e) { /* closed already */ }
+  }
+  if (failed || !samples.length) return null;
+  // Some encoders give no description: build the 2-byte AudioSpecificConfig for AAC-LC.
+  if (!description || !description.length) {
+    const sfi = [96000, 88200, 64000, 48000, 44100, 32000, 24000, 22050, 16000, 12000, 11025, 8000].indexOf(sampleRate);
+    if (sfi < 0) return null;
+    description = new Uint8Array([(2 << 3) | (sfi >> 1), ((sfi & 1) << 7) | (channels << 3)]);
+  }
+  return { sampleRate, channels, description, samples };
+}
+const VIDEO_INTRO = 1.2, VIDEO_OUTRO = 7;  // seconds of still wheel before the spin, and after it lands
+const videoName = rec => `${exportStem()} round ${rec.round}${rec.redraw ? ' redraw' : ''}.mp4`;
+const mkCanvas = (w, h) => (typeof OffscreenCanvas !== 'undefined' ? new OffscreenCanvas(w, h) : Object.assign(document.createElement('canvas'), { width: w, height: h }));
+/** "Record spin (MP4)": checks the browser can make video, offers to close entries first, then spins and records. */
+async function recordSpin() {
+  if (isLocked() || othersDrawing() || !wheelEntries.length) return;
+  if (videoJob && videoJob.state === 'making') { toast('A video is still being made — wait for it to finish.'); return; }
+  const setup = await pickH264();
+  if (!setup) {
+    toast('This browser can’t make videos.', { type: 'error', detail: 'Open this page in Google Chrome or Microsoft Edge on this laptop to record a spin.', timeout: 9000 });
+    return;
+  }
+  const open = !entriesClosed();
+  const go = await askConfirm({
+    title: 'Record this spin?',
+    text: 'The winner is drawn now, exactly like pressing SPIN, and you get an MP4 video of the wheel landing on them'
+      + ` (${setup.height}p) to give to the LED screen. It downloads by itself a few seconds after the wheel stops.`
+      + (open ? ' Entries are still open: close them first so nobody joins after the video.' : ''),
+    ok: 'Spin and record',
+    extra: open ? { label: 'Close entries first', icon: 'lock', onClick: () => {
+      const st = confirmState;
+      setEntriesOpen(false).then(ok => { if (confirmState === st) $('#cdExtraMsg').textContent = ok ? 'Entries closed — nobody else can join.' : 'Couldn’t close entries. Try again.'; });
+      return 'Closing entries…';
+    } } : null
+  });
+  if (!go || isLocked()) return;
+  spin({ record: setup });
+}
+/** Makes the video of a recorded draw in the background (the winner card shows how far it is), then downloads it. */
+function startSpinVideo(rec, entry, logId) {
+  if (videoJob && videoJob.state === 'making') videoJob.stop = true;
+  const job = { logId, name: videoName(rec), state: 'making', pct: 0, blob: null, stop: false };
+  videoJob = job;
+  renderVideoUI();
+  makeSpinVideo(rec, entry, p => { job.pct = p; renderVideoUI(); }, () => job.stop).then(blob => {
+    if (videoJob !== job) return;
+    if (!blob) { videoJob = null; renderVideoUI(); return; } // cancelled
+    job.blob = blob;
+    job.state = 'ready';
+    renderVideoUI();
+    announce(`Video ready: ${job.name}`);
+    download(job.name, blob);
+    if (!(winnerDialog.open && currentWin && currentWin.rec.id === job.logId)) {
+      toast(`Video ready: ${job.name}`, { detail: 'Check your Downloads folder.', action: { label: 'Download again', fn: () => download(job.name, blob) } });
+    }
+  }, e => {
+    console.error('MAP Lucky Draw: video', e);
+    if (videoJob !== job) return;
+    job.state = 'failed';
+    renderVideoUI();
+    toast('Couldn’t make the video.', { type: 'error', detail: 'The draw itself is saved. Try Record spin again, or use Google Chrome or Microsoft Edge.' });
+  });
+}
+/** The video line on the winner card, and the Record button. */
+function renderVideoUI() {
+  const job = videoJob;
+  const show = !!(job && currentWin && currentWin.rec.id === job.logId);
+  $('#wdVideo').hidden = !show;
+  if (show) {
+    const text = job.state === 'making' ? `Making the video… ${Math.round(job.pct * 100)}%`
+      : job.state === 'ready' ? `Video saved: ${job.name}` : 'Couldn’t make the video.';
+    if ($('#wdVideoText').textContent !== text) $('#wdVideoText').textContent = text;
+    $('#wdVideoAgain').hidden = job.state !== 'ready';
+    $('#wdVideoStop').hidden = job.state !== 'making';
+  }
+  const rb = $('#recordBtn');
+  rb.disabled = $('#spinBtn').disabled || !!(job && job.state === 'making');
+}
+$('#recordBtn').addEventListener('click', recordSpin);
+$('#wdVideoAgain').addEventListener('click', () => { if (videoJob && videoJob.blob) download(videoJob.name, videoJob.blob); });
+$('#wdVideoStop').addEventListener('click', () => { if (videoJob && videoJob.state === 'making') videoJob.stop = true; });
+
+/** The text, shrunk (down to min px) and then cut with "…" so it fits maxW; sets x.font. */
+function fitVideoText(x, text, maxW, size, min) {
+  let fs = size;
+  x.font = `700 ${fs}px ${FONT}`;
+  let w = x.measureText(text).width;
+  if (w > maxW) { fs = Math.max(min, Math.floor(fs * maxW / w)); x.font = `700 ${fs}px ${FONT}`; w = x.measureText(text).width; }
+  return w > maxW ? truncateTo(text, maxW, x) : text;
+}
+function roundRect(x, l, t, w, h, r) {
+  x.beginPath();
+  x.moveTo(l + r, t); x.arcTo(l + w, t, l + w, t + h, r); x.arcTo(l + w, t + h, l, t + h, r);
+  x.arcTo(l, t + h, l, t, r); x.arcTo(l, t, l + w, t, r); x.closePath();
+}
+/** The MAP logo (the same picture as on the wheel's hub), or null. */
+async function videoLogo() {
+  try {
+    const bg = getComputedStyle($('.hub .logo-file')).backgroundImage;
+    const m = /url\(["']?(.*?)["']?\)$/.exec(bg);
+    if (!m) return null;
+    const img = new Image();
+    img.src = m[1];
+    await img.decode();
+    return img;
+  } catch (e) { return null; }
+}
+/** Seeded random numbers (the video's confetti is the same every time it is made). */
+function seededRandom(seed) {
+  let a = seed >>> 0;
+  return () => { a = (a + 0x6d2b79f5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+}
+
+/**
+ * Renders the recorded draw rec (see spinNow) to an MP4 Blob, or null when stopped. The spin keeps the screen's
+ * timing (Settings → Spin duration) with full motion, the same wheel, and lands on the same point of the winner's
+ * segment; then the spotlight, the rim lights flashing and the winner card with confetti.
+ */
+async function makeSpinVideo(rec, entry, onProgress, shouldStop) {
+  const setup = rec.setup;
+  const W = setup.width, H = setup.height, fps = setup.fps, k = H / 1080;
+  const duration = clamp(S().duration, 3, 20) * 1000;
+  const turns = clamp(Math.round(S().duration * 0.72), 3, 14);
+  const from = rec.from;
+  const plan = { from, delta: mod(-rec.target - from, TAU) + turns * TAU, duration, wind: Math.min(320, duration * 0.06), windAmt: 0.11 };
+  const tSpin = VIDEO_INTRO, tLand = VIDEO_INTRO + duration / 1000, tCard = tLand + 0.75, total = tLand + VIDEO_OUTRO;
+  const frames = Math.ceil(total * fps), dt = 1 / fps;
+  const segs = rec.segs, n = segs.length;
+  const segAt = a => {
+    const v = mod(a, TAU);
+    let lo = 0, hi = n - 1;
+    while (lo < hi) { const mid = (lo + hi) >> 1; if (v < segs[mid].end) hi = mid; else lo = mid + 1; }
+    return lo;
+  };
+  // Wheel geometry (as drawWheel / buildBulbs / the hub and pointer CSS, at the video's wheel size D)
+  const D = Math.round(860 * k), cx = W / 2, cy = Math.round(600 * k);
+  const R = D / 2 - 0.5, rim = Math.max(8, D * 0.052), Rs = R - rim, rr = R - rim / 2;
+  let bulbN = Math.round((TAU * rr) / Math.max(24, D * 0.078));
+  bulbN = clamp(bulbN - (bulbN % 2), 16, 48);
+  const bulbR = Math.max(2.2, rim * 0.19);
+
+  // 1) The timeline, frame by frame as the live spin does it: rotation, the pointer's spring, the rim-light chase,
+  //    and when each tick sounds.
+  const rotF = new Float64Array(frames), ptrF = new Float32Array(frames), chaseF = new Float32Array(frames);
+  const ticks = [];
+  let lastIdx = segAt(-from), lastTick = -1, lastRot = from, pa = 0, pv = 0, cpos = 0;
+  for (let i = 0; i < frames; i++) {
+    const t = i * dt;
+    const r = t < tSpin ? from : t < tLand ? spinRotation(plan, (t - tSpin) * 1000) : from + plan.delta;
+    const omega = (r - lastRot) / dt;
+    lastRot = r;
+    if (t >= tSpin && t < tLand) {
+      cpos += Math.min(24, (Math.abs(omega) / (TAU / bulbN)) * 1.4) * dt;
+      const idx = segAt(-r);
+      if (idx !== lastIdx) {
+        lastIdx = idx;
+        if (lastTick < 0 || t - lastTick > 0.042) { lastTick = t; ticks.push(t); }
+        const kick = clamp(9 + Math.abs(omega) * 1.1, 11, 26);
+        if (pa > -kick) { pa = -kick; pv = 0; }
+      }
+    }
+    for (let rem = dt; rem > 1e-6; rem -= 0.016) { const st = Math.min(rem, 0.016); pv += (-700 * pa - 30 * pv) * st; pa += pv * st; }
+    if (Math.abs(pa) < 0.05 && Math.abs(pv) < 0.5) { pa = 0; pv = 0; }
+    rotF[i] = r; ptrF[i] = pa; chaseF[i] = cpos;
+  }
+  onProgress(0.02);
+
+  // 2) The sound: the same ticks and fanfare, rendered offline, as AAC (none when this browser can't make AAC).
+  let audio = null;
+  if (S().sound && typeof OfflineAudioContext !== 'undefined') {
+    try {
+      const rate = 48000;
+      const oac = new OfflineAudioContext(2, Math.ceil(total * rate), rate);
+      const out = oac.createGain();
+      out.gain.value = clamp(S().volume, 0, 1) * 0.9;
+      out.connect(oac.destination);
+      for (const t of ticks) tickAt(oac, t + 0.001, out);
+      fanfareAt(oac, tLand + 0.03, out);
+      audio = await encodeAac(await oac.startRendering());
+    } catch (e) { audio = null; }
+  }
+  if (shouldStop()) return null;
+  onProgress(0.06);
+
+  // 3) What doesn't move, drawn once: the background with the titles, the wheel, the hub, the winner card.
+  const logo = await videoLogo();
+  const bg = mkCanvas(W, H), b = bg.getContext('2d');
+  const grad = b.createRadialGradient(cx, cy, D * 0.2, cx, cy, W * 0.75);
+  grad.addColorStop(0, '#4d004d'); grad.addColorStop(0.55, '#2a002a'); grad.addColorStop(1, '#14000f');
+  b.fillStyle = grad; b.fillRect(0, 0, W, H);
+  const spot = b.createRadialGradient(cx, cy, D * 0.45, cx, cy, D * 0.8);
+  spot.addColorStop(0, 'rgba(163,8,163,.45)'); spot.addColorStop(1, 'rgba(163,8,163,0)');
+  b.fillStyle = spot; b.fillRect(0, 0, W, H);
+  b.save(); b.shadowColor = 'rgba(163,8,163,.75)'; b.shadowBlur = 70 * k;
+  b.beginPath(); b.arc(cx, cy, R, 0, TAU); b.fillStyle = '#2a002a'; b.fill(); b.restore();
+  const plate = 132 * k, pl = 56 * k, pt = 48 * k;
+  b.fillStyle = '#ffffff'; roundRect(b, pl, pt, plate, plate, 26 * k); b.fill();
+  if (logo) {
+    const lh = plate * 0.78, lw = lh * (logo.naturalWidth / logo.naturalHeight || 298 / 317);
+    b.drawImage(logo, pl + (plate - lw) / 2, pt + (plate - lh) / 2, lw, lh);
+  }
+  b.textBaseline = 'alphabetic';
+  b.textAlign = 'left';
+  b.fillStyle = '#ffffff';
+  const title = fitVideoText(b, S().title || DEFAULTS.title, 640 * k, 62 * k, 34 * k);
+  b.fillText(title, pl + plate + 28 * k, pt + 62 * k);
+  const evLine = [state.ev.name, state.ev.date].filter(Boolean).join(' · ');
+  if (evLine) { b.fillStyle = '#e7b3e7'; b.fillText(fitVideoText(b, evLine, 640 * k, 34 * k, 22 * k), pl + plate + 28 * k, pt + 112 * k); }
+  b.textAlign = 'right';
+  b.fillStyle = '#e7b3e7';
+  b.font = `700 ${30 * k}px ${FONT}`;
+  if ('letterSpacing' in b) b.letterSpacing = `${4 * k}px`;
+  b.fillText(`ROUND ${rec.round}${rec.redraw ? ' · REDRAW' : ''}`, W - 60 * k, pt + 44 * k);
+  if ('letterSpacing' in b) b.letterSpacing = '0px';
+  if (rec.prize) { b.fillStyle = '#ffffff'; b.fillText(fitVideoText(b, rec.prize, 700 * k, 46 * k, 26 * k), W - 60 * k, pt + 100 * k); }
+
+  const wheelCv = mkCanvas(D, D);
+  paintWheel(wheelCv.getContext('2d'), D, rec.entries, segs, true);
+
+  const hubD = Math.max(D * 0.32, Math.min(120, D * 0.4)), border = D * 0.012, pad = Math.ceil(30 * k);
+  const hubCv = mkCanvas(Math.ceil(hubD + pad * 2), Math.ceil(hubD + pad * 2)), hb = hubCv.getContext('2d');
+  const hc = hubCv.width / 2;
+  hb.save(); hb.shadowColor = 'rgba(42,0,42,.35)'; hb.shadowBlur = 18 * k; hb.shadowOffsetY = 6 * k;
+  hb.beginPath(); hb.arc(hc, hc, hubD / 2 + D * 0.006, 0, TAU); hb.fillStyle = 'rgba(255,255,255,.7)'; hb.fill(); hb.restore();
+  hb.beginPath(); hb.arc(hc, hc, hubD / 2, 0, TAU); hb.fillStyle = '#6e006e'; hb.fill();
+  hb.beginPath(); hb.arc(hc, hc, hubD / 2 - border, 0, TAU); hb.fillStyle = '#ffffff'; hb.fill();
+  if (logo) {
+    const inner = hubD - border * 2, lh = inner * 0.63, lw = lh * (logo.naturalWidth / logo.naturalHeight || 298 / 317);
+    hb.drawImage(logo, hc - lw / 2, hc - lh / 2 + inner * 0.01, lw, lh);
+  }
+
+  const ptrBody = new Path2D('M30 82 C24 70 8 48 8 30 A22 22 0 0 1 52 30 C52 48 36 70 30 82 Z');
+  const ptrHouse = new Path2D('M30 20.6 21.6 27.5v9.1h5.8v-5.5h5.2v5.5h5.8v-9.1z');
+  const ptrW = D * 0.092, ptrH = D * 0.13, ptrL = cx - D * 0.046, ptrT = cy - D / 2 - D * 0.035;
+
+  const cardW = Math.round(1180 * k), cardH = Math.round(470 * k), band = Math.round(92 * k);
+  const card = mkCanvas(cardW, cardH), c = card.getContext('2d');
+  roundRect(c, 0, 0, cardW, cardH, 36 * k); c.save(); c.clip();
+  c.fillStyle = '#ffffff'; c.fillRect(0, 0, cardW, cardH);
+  const bandG = c.createLinearGradient(0, 0, cardW, 0);
+  bandG.addColorStop(0, '#6e006e'); bandG.addColorStop(1, '#a308a3');
+  c.fillStyle = bandG; c.fillRect(0, 0, cardW, band);
+  c.restore();
+  c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillStyle = '#ffffff';
+  if ('letterSpacing' in c) c.letterSpacing = `${3 * k}px`;
+  c.fillText(fitVideoText(c, `ROUND ${rec.round}${rec.prize ? `  •  ${rec.prize}` : ''}`, cardW - 80 * k, 34 * k, 22 * k), cardW / 2, band / 2);
+  c.fillStyle = '#6a566a';
+  c.fillText(fitVideoText(c, rec.redraw ? 'REDRAW AFTER A NO-SHOW — THE NEW WINNER IS' : 'AND THE WINNER IS', cardW - 80 * k, 32 * k, 20 * k), cardW / 2, band + 88 * k);
+  if ('letterSpacing' in c) c.letterSpacing = '0px';
+  const winner = String(entry.name || '').trim();
+  c.direction = isRtl(winner) ? 'rtl' : 'ltr';
+  c.fillStyle = '#6e006e';
+  c.fillText(fitVideoText(c, winner, cardW - 100 * k, 132 * k, 56 * k), cardW / 2, band + 228 * k);
+  c.direction = 'ltr';
+  if (logo) { const lh = 64 * k, lw = lh * (logo.naturalWidth / logo.naturalHeight || 298 / 317); c.drawImage(logo, cardW / 2 - lw / 2, cardH - lh - 24 * k, lw, lh); }
+
+  // Confetti, as on screen (startConfetti) but seeded, from the moment the card appears.
+  const rnd = seededRandom(n * 7919 + rec.round * 104729 + Math.round(rec.target * 1e6));
+  const colours = ['#a308a3', '#6e006e', '#c94fc9', '#e7b3e7', '#ffffff', '#4d004d', '#f7e6f7'];
+  const parts = [];
+  if (S().confetti) {
+    const N = 280;
+    for (let i = 0; i < N; i++) {
+      const kind = i % 3;
+      let px, py, vx, vy;
+      if (kind === 2) { px = rnd() * W; py = -20 * k - rnd() * H * 0.3; vx = (rnd() - 0.5) * 120 * k; vy = (60 + rnd() * 160) * k; }
+      else {
+        const left = kind === 0;
+        px = left ? -10 : W + 10; py = H * (0.75 + rnd() * 0.2);
+        const ang = -(Math.PI / 2 - (0.25 + rnd() * 0.55));
+        const sp = (0.9 + rnd() * 0.7) * Math.sqrt(H) * 48;
+        vx = (left ? 1 : -1) * Math.cos(ang) * sp; vy = Math.sin(ang) * sp;
+      }
+      parts.push({ x: px, y: py, vx, vy, rot: rnd() * TAU, vr: (rnd() - 0.5) * 12, w: (7 + rnd() * 8) * 1.6 * k, h: (4 + rnd() * 6) * 1.6 * k,
+        col: colours[Math.floor(rnd() * colours.length)], shape: Math.floor(rnd() * 4), wob: rnd() * TAU, wobS: 4 + rnd() * 6 });
+    }
+  }
+  const CONF = 3.6;
+
+  // 4) Every frame: background, the turning wheel, spotlight, rim lights, hub, pointer, then the card and confetti.
+  const finalRot = from + plan.delta;
+  const win = segs[rec.winIdx];
+  const draw = (x, i) => {
+    const t = i * dt;
+    x.drawImage(bg, 0, 0);
+    x.save(); x.translate(cx, cy); x.rotate(rotF[i]); x.drawImage(wheelCv, -D / 2, -D / 2, D, D); x.restore();
+    if (t >= tLand && win) { // the winning segment: the rest dimmed, an outline glowing (as drawSpotlight)
+      const a = clamp((t - tLand) / 0.35, 0, 1);
+      x.save(); x.globalAlpha = a; x.translate(cx, cy);
+      const a0 = win.start + finalRot - Math.PI / 2, a1 = win.end + finalRot - Math.PI / 2;
+      if (n > 1) {
+        x.beginPath(); x.arc(0, 0, R + 1, 0, TAU); x.moveTo(0, 0); x.arc(0, 0, R + 1, a0, a1); x.closePath();
+        x.fillStyle = 'rgba(18,0,18,0.55)'; x.fill('evenodd');
+      }
+      x.beginPath();
+      if (n > 1) { x.moveTo(0, 0); x.arc(0, 0, Rs - 1, a0, a1); x.closePath(); } else x.arc(0, 0, Rs - 1, 0, TAU);
+      x.lineJoin = 'round'; x.strokeStyle = '#ffffff'; x.lineWidth = Math.max(3, D * 0.009);
+      x.shadowColor = 'rgba(255,170,255,0.95)'; x.shadowBlur = D * 0.04; x.stroke();
+      x.restore();
+    }
+    // Rim lights: twinkle at rest, chase while spinning, all flashing for 3.2 s after the landing.
+    const mode = t >= tSpin && t < tLand ? 'chase' : t >= tLand && t < tLand + 3.2 ? 'party' : 'idle';
+    const cstep = Math.floor(chaseF[i]);
+    for (let j = 0; j < bulbN; j++) {
+      const a = (j / bulbN) * TAU - Math.PI / 2;
+      let lit;
+      if (mode === 'chase') lit = mod(j - cstep, 3) === 0;
+      else if (mode === 'party') lit = Math.floor((t - tLand) / 0.15) % 2 === 0;
+      else lit = Math.floor((t + (j % 2 ? 0.7 : 0)) / 0.7) % 2 === 0;
+      x.save();
+      x.beginPath(); x.arc(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr, bulbR, 0, TAU);
+      if (lit) { x.fillStyle = '#ffffff'; x.shadowColor = 'rgba(255,220,255,.9)'; x.shadowBlur = 8 * k; }
+      else { x.globalAlpha = mode === 'chase' ? 0.5 : 0.55; x.fillStyle = mode === 'chase' ? '#d99bd9' : '#e7b3e7'; }
+      x.fill();
+      x.restore();
+    }
+    x.drawImage(hubCv, cx - hubCv.width / 2, cy - hubCv.height / 2);
+    // Pointer (its spring swings it as the segments pass)
+    x.save();
+    x.translate(ptrL + ptrW / 2, ptrT + ptrH * 0.3);
+    x.rotate((ptrF[i] * Math.PI) / 180);
+    x.translate(-ptrW / 2, -ptrH * 0.3);
+    x.scale(ptrW / 60, ptrH / 84);
+    x.shadowColor = 'rgba(42,0,42,.45)'; x.shadowBlur = 6 * k; x.shadowOffsetY = 4 * k;
+    x.fillStyle = '#6e006e'; x.fill(ptrBody);
+    x.shadowColor = 'transparent';
+    x.lineWidth = 4; x.lineJoin = 'round'; x.strokeStyle = '#ffffff'; x.stroke(ptrBody);
+    x.beginPath(); x.arc(30, 29, 13.5, 0, TAU); x.fillStyle = '#ffffff'; x.fill();
+    x.fillStyle = '#a308a3'; x.fill(ptrHouse);
+    x.restore();
+    // The winner card, then confetti over everything
+    if (t >= tCard) {
+      const q = clamp((t - tCard) / 0.4, 0, 1), e = 1 - Math.pow(1 - q, 3);
+      x.save(); x.globalAlpha = 0.6 * e; x.fillStyle = '#12000f'; x.fillRect(0, 0, W, H); x.restore();
+      const sc = 0.9 + 0.1 * e;
+      x.save(); x.globalAlpha = e;
+      x.translate(W / 2, H / 2 + 20 * k); x.scale(sc, sc);
+      x.shadowColor = 'rgba(0,0,0,.45)'; x.shadowBlur = 60 * k; x.shadowOffsetY = 20 * k;
+      x.drawImage(card, -cardW / 2, -cardH / 2);
+      x.restore();
+      const el = t - tCard;
+      if (parts.length && el < CONF) {
+        const fade = el > CONF - 0.9 ? clamp((CONF - el) / 0.9, 0, 1) : 1;
+        x.save(); x.globalAlpha = fade;
+        for (const p of parts) {
+          p.vy += 900 * k * dt; p.vx *= Math.pow(0.35, dt); p.vy *= Math.pow(0.55, dt);
+          p.wob += p.wobS * dt; p.x += (p.vx + Math.sin(p.wob) * 30 * k) * dt; p.y += p.vy * dt; p.rot += p.vr * dt;
+          if (p.y > H + 30) continue;
+          x.save(); x.translate(p.x, p.y); x.rotate(p.rot); x.fillStyle = p.col;
+          const sy = Math.abs(Math.cos(p.wob));
+          if (p.shape === 0) { x.beginPath(); x.arc(0, 0, p.h * 0.6, 0, TAU); x.fill(); }
+          else if (p.shape === 1) { x.beginPath(); x.moveTo(0, -p.h); x.lineTo(p.h, p.h); x.lineTo(-p.h, p.h); x.closePath(); x.fill(); }
+          else x.fillRect(-p.w / 2, (-p.h / 2) * sy, p.w, p.h * sy + 0.5);
+          x.restore();
+        }
+        x.restore();
+      }
+    }
+  };
+
+  // 5) Encode (pausing while a live spin runs here, so it stays smooth), then write the MP4.
+  const v = await encodeH264(setup, frames, draw, { onProgress: p => onProgress(0.06 + 0.92 * p), shouldStop, shouldPause: () => spinning });
+  if (!v) return null;
+  const bytes = mp4Mux({ video: { width: W, height: H, fps, description: v.description, samples: v.samples }, audio });
+  onProgress(1);
+  return new Blob([bytes], { type: 'video/mp4' });
 }
 
 /* ---------------------------------------------------------------------
@@ -2856,6 +3515,7 @@ function openWinnerDialog(rec, { quiet = false } = {}) {
   second.className = 'btn btn-secondary btn-lg';
   actions.replaceChildren(first, second, btnNo);
   $('#wdHint').textContent = (currentWin && currentWin.restored ? (currentWin.adopted ? 'Reopened from the laptop that drew it. ' : 'Reopened after the page reloaded. ') : '') + `Esc = ${primary === 'remove' ? 'Remove from wheel' : 'Keep on wheel'}`;
+  renderVideoUI();
   try { if (!winnerDialog.open) winnerDialog.showModal(); } catch (e) { winnerDialog.setAttribute('open', ''); }
   first.focus();
   if (!quiet) startConfetti();
@@ -2901,7 +3561,7 @@ function renderWinnerContact() {
 /** Apply a winner action: 'remove' | 'keep' | 'noshow'. */
 function finishWinner(action) {
   if (!winnerOpen || !currentWin) return;
-  const { rec, marked } = currentWin;
+  const { rec, marked, recorded } = currentWin;
   currentWin = null;
   winnerOpen = false;
   lastWinnerClose = performance.now();
@@ -2931,7 +3591,9 @@ function finishWinner(action) {
   if (action === 'noshow') {
     if (activeEntries().length) {
       toast(`${rec.name} marked as a no-show. Drawing again for round ${rec.round}…`);
-      spin({ redraw: { round: rec.round, prize: rec.prize } });
+      // A recorded draw's redraw is recorded too (the LED screen showed the first one); null if video can't be made now.
+      if (recorded) pickH264().then(setup => spin({ redraw: { round: rec.round, prize: rec.prize }, record: setup }));
+      else spin({ redraw: { round: rec.round, prize: rec.prize } });
     } else toast('No entries left on the wheel to draw again.', { type: 'error' });
   } else {
     setTimeout(() => { if (!winnerDialog.open && !signupOpen) $('#spinBtn').focus({ preventScroll: true }); }, 0);
@@ -2988,6 +3650,7 @@ function askConfirm({ title, text = '', ok = 'OK', cancel = 'Cancel', danger = f
     $('#cdText').hidden = !text;
     $('#cdExtraRow').hidden = !extra;
     $('#cdExtraLabel').textContent = extra ? extra.label : '';
+    $('#cdExtra use').setAttribute('href', `#i-${(extra && extra.icon) || 'sheet'}`);
     $('#cdExtraMsg').textContent = '';
     const okBtn = $('#cdOk');
     okBtn.textContent = ok;
@@ -3077,6 +3740,7 @@ onFormSubmit(addForm, () => {
     if (firstBad) firstBad[1].focus();
     return;
   }
+  if (entriesClosed()) { $('#addMsg').textContent = CLOSED_ADD_MSG; toast(CLOSED_ADD_MSG, { type: 'error' }); return; }
   if (!wheelRoom()) { $('#addMsg').textContent = FULL_MSG; toast(FULL_MSG, { type: 'error' }); return; }
   const e = makeEntry({ ...res.values, consent: false }, 'manual');
   state.entries.push(e);
@@ -3194,6 +3858,7 @@ const SKIP_REASONS = [
 /** Bulk paste / CSV import. Like the forms, every row needs a name, a valid phone number and a valid email; rows
     missing any of them (and duplicates, when blocking is on) are skipped and reported by reason. */
 function importRecords(records, source) {
+  if (entriesClosed()) return { added: 0, skipped: records.length, reasons: {}, text: CLOSED_ADD_MSG };
   const idx = S().blockDuplicates ? dupIndex() : null;
   let pos = nextPos();
   let added = 0;
@@ -3630,6 +4295,54 @@ function applyTheme() {
   if (meta) meta.setAttribute('content', eff === 'dark' ? '#000000' : '#6e006e');
   $('#btnTheme').setAttribute('aria-label', eff === 'dark' ? 'Switch to light theme' : 'Switch to dark theme');
 }
+/* Entries open or closed ("Close entries" / "Reopen entries"). On a draw it is the server's sign-ups switch, shared by
+   every laptop of the draw (phones are then refused: "Entries are now closed."); offline it is a setting that the
+   laptop's own sign-up screen follows, also in its separate window. Closed, nobody new joins: phones, the sign-up
+   screen and adding people by hand all stop. Everyone already on the wheel stays, and so do phone sign-ups the
+   server took before it closed. */
+function entriesClosed() { return appMode === 'organiser' ? sync.open === false : appMode !== 'guest' && S().entriesOpen === false; }
+const CLOSED_ADD_MSG = 'Entries are closed. Choose “Reopen entries” to add people.';
+let entriesBusy = false;
+async function setEntriesOpen(open) {
+  if (entriesBusy) return false;
+  entriesBusy = true;
+  renderEntriesToggle();
+  let ok = true;
+  try {
+    if (appMode === 'organiser') ok = (await pushConfig({ open })).ok; // says itself why it failed
+    else setSetting('entriesOpen', open);
+  } finally {
+    entriesBusy = false;
+    renderEntriesToggle();
+  }
+  if (!ok) return false;
+  renderAll();
+  toast(open ? 'Entries are open again: people can join.' : 'Entries closed: nobody else can join.',
+    { detail: open ? '' : `${appMode === 'organiser' ? 'Phones now see “Entries are now closed.” ' : ''}Everyone already on the wheel stays.` });
+  return true;
+}
+async function toggleEntries() {
+  if (entriesBusy) return false;
+  if (entriesClosed()) return setEntriesOpen(true);
+  const ok = await askConfirm({
+    title: 'Close entries?',
+    text: `Nobody else can join the draw: ${appMode === 'organiser' ? 'guests’ phones show “Entries are now closed.”' : 'the sign-up screen shows “Entries are now closed.”'}, and people can’t be added here either. Everyone already on the wheel stays. You can reopen entries at any time.`,
+    ok: 'Close entries'
+  });
+  return ok ? setEntriesOpen(false) : false;
+}
+function renderEntriesToggle() {
+  const closed = entriesClosed();
+  for (const b of $$('[data-action="toggle-entries"]')) {
+    b.classList.toggle('is-closed', closed);
+    b.querySelector('use').setAttribute('href', closed ? '#i-unlock' : '#i-lock');
+    const text = closed ? 'Reopen entries' : 'Close entries';
+    if (b.querySelector('.be-text').textContent !== text) b.querySelector('.be-text').textContent = text;
+    b.disabled = entriesBusy || (appMode === 'organiser' && !sync.authed);
+    b.title = closed ? 'Entries are closed: nobody else can join. Click to let people join again.'
+      : 'Stop anyone else joining: phones, the sign-up screen and adding people here.';
+  }
+}
 function setSetting(key, value, { quiet = false } = {}) {
   if (S()[key] === value) return;
   state.settings = { ...S(), [key]: value, updatedAt: stamp(), ...(key === 'prize' ? { prizeAt: stamp() } : {}) };
@@ -3734,6 +4447,7 @@ const suForm = $('#suForm');
 const suFields = { name: $('#suName'), number: $('#suNumber'), email: $('#suEmail') };
 
 /* The guest screen never shows how many people have entered, or anyone else's details. */
+let kioskClosed = false; // "Entries are now closed." is showing on this laptop's sign-up screen
 function renderSignup() {
   const s = S();
   $('#suConsentText').textContent = s.consentText || DEFAULT_CONSENT;
@@ -3742,6 +4456,20 @@ function renderSignup() {
   const prize = s.prize.trim();
   $('#suPrize').hidden = !prize;
   $('#suPrizeText').textContent = prize;
+  if (appMode === 'guest') return; // a guest's own phone follows the server (showGuestState)
+  // Entries closed (or reopened) from the wheel, also in another window: the form gives way to the closed message
+  // and comes back by itself. A thank-you that is showing stays.
+  const closed = entriesClosed();
+  if (closed && $('#suSuccess').hidden) {
+    suForm.hidden = true;
+    $('#suStateTitle').textContent = 'Entries are now closed.';
+    $('#suStateText').textContent = 'Thank you for your interest.';
+    $('#suState').hidden = false;
+    kioskClosed = true;
+  } else if (!closed && kioskClosed) {
+    kioskClosed = false;
+    resetSignupForm();
+  }
 }
 function resetSignupForm() {
   clearTimeout(suIdleTimer);
@@ -3856,6 +4584,7 @@ suForm.addEventListener('keydown', ev => {
 });
 onFormSubmit(suForm, () => {
   if (appMode === 'guest') return guestSubmit(); // a guest's own phone: sent to api.php
+  if (entriesClosed()) { renderSignup(); return; } // closed while the form was open
   const vals = { name: suFields.name.value, number: suFields.number.value, email: suFields.email.value };
   const res = validateFields(vals);
   let dupMsg = '';
@@ -4396,7 +5125,7 @@ async function newEvent({ fromStep = false, name = '' } = {}) {
     dismissWinnerCard();
     evRedraw = null;
     const fresh = freshState();
-    fresh.settings = { ...S(), prize: '', prizeAt: stamp(), updatedAt: stamp() };
+    fresh.settings = { ...S(), prize: '', prizeAt: stamp(), entriesOpen: true, updatedAt: stamp() };
     // A new epoch, so other windows still holding the old event can't merge it back. On a draw it is named after
     // the server's new epoch: every laptop on this draw that follows this New event lands on the same one.
     fresh.epoch = { id: srvEpoch ? 's:' + srvEpoch : uid(), at: Math.max(Date.now(), state.epoch.at + 1) };
@@ -4483,6 +5212,7 @@ document.addEventListener('click', async ev => {
       break;
     }
     case 'new-event': newEvent(); break;
+    case 'toggle-entries': toggleEntries(); break;
     case 'delete-all': {
       const onDraw = appMode === 'organiser' && sync.authed;
       const ok = await askConfirm({ title: 'Delete ALL data?', text: 'Every entry, the winner log and all settings will be permanently deleted from this browser. This cannot be undone.'
@@ -4543,7 +5273,8 @@ function renderAll() {
   const parts = elsewhere ? ['A winner is being drawn on another laptop'] : empty ? ['The wheel is empty'] : eventMode ? [] : [`Round ${nextRound}`, prize];
   // Each part stays on one line (the prize may wrap), so a narrow column wraps at the separators.
   parts.filter(Boolean).forEach((t, i) => { if (i) info.append(' · '); info.append(h('span', { class: i ? 'si si-prize' : 'si', text: t })); });
-  if (queued) info.append(info.childNodes.length ? ' · ' : '', h('span', { class: 'si queued', text: 'New entries join after this draw' }));
+  if (queued && !entriesClosed()) info.append(info.childNodes.length ? ' · ' : '', h('span', { class: 'si queued', text: 'New entries join after this draw' }));
+  if (entriesClosed() && !elsewhere) info.append(info.childNodes.length ? ' · ' : '', h('span', { class: 'si si-closed', text: 'Entries closed' }));
   const pd = $('#prizeDisplay');
   pd.replaceChildren();
   if (prize) pd.append(h('span', { class: 'eyebrow', text: eventMode ? 'Prize' : `Round ${nextRound} prize` }), h('strong', { text: prize }));
@@ -4558,12 +5289,14 @@ function renderAll() {
   renderSettings();
   renderEventChip();
   renderOthers();
+  renderEntriesToggle();
   const listSig = JSON.stringify([state.entries, state.log.map(r => r.entryId + r.type), s.privacy, locked]);
   if (listSig !== lastListSig || listDirty) { lastListSig = listSig; renderEntries(); }
   const logSig = JSON.stringify([state.log, s.privacy]);
   if (logSig !== lastLogSig) { lastLogSig = logSig; renderLog(); }
   if (signupOpen) renderSignup();
   if (winnerOpen && currentWin) renderWinnerContact();
+  renderVideoUI();
 }
 
 /* ---------------------------------------------------------------------
@@ -5727,6 +6460,7 @@ function updatePill() {
   el.dataset.state = st;
   const sw = $('#psOpen');
   if (!sw.disabled && sync.open != null) sw.checked = sync.open;
+  renderEntriesToggle();
 }
 function openServerSignup() {
   let w = null;
@@ -6379,12 +7113,13 @@ window.MAPDraw = Object.freeze({
     return {
       entries: s.entries, log: s.log, settings: s.settings, round: s.meta.round, pending: appMode !== 'guest' && myPending() ? cleanPending(myPending()) : null,
       active: s.entries.filter(e => e.status === 'active'),
-      wheel: wheelEntries.map(e => e.id), spinning, winnerOpen, eventMode, signupOpen, storage: storageOK,
+      wheel: wheelEntries.map(e => e.id), spinning, winnerOpen, eventMode, signupOpen, storage: storageOK, entriesOpen: !entriesClosed(),
       mode: appMode, phoneSync: { state: appMode === 'organiser' ? pillState() : null, epoch: sync.epoch, since: sync.since },
       event: { name: s.ev.name, date: s.ev.date }, eventStep: evStepOpen, slot: PAGE_SLOT ? PAGE_SLOT.name : null,
       guestTarget: appMode === 'guest' ? (guestTarget ? guestTarget.name : null) : undefined,
       server: appMode === 'organiser' ? { ready: evSync.ready, epoch: evSync.epoch, version: evSync.version, bound: state.srv.id } : null,
-      hold: evStepOpen && evHold ? { name: evHold.name, others: !!evHold.others, joined: !!evHold.joined } : null
+      hold: evStepOpen && evHold ? { name: evHold.name, others: !!evHold.others, joined: !!evHold.joined } : null,
+      video: videoJob ? { state: videoJob.state, pct: videoJob.pct, name: videoJob.name, size: videoJob.blob ? videoJob.blob.size : 0 } : null
     };
   },
   pickWeightedIndex,

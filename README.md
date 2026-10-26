@@ -170,6 +170,29 @@ button.
   lands, so they can't be drawn again.
 - **Clear log** in the Winners tab also restarts the rounds at Round 1.
 
+**Close entries**
+- **Close entries** (first button in the panel header) stops anyone else joining when you say so: guests'
+  phones show *Entries are now closed.* (a phone already on the form is refused when it sends), the laptop's
+  own sign-up screen closes, and people can't be added by hand, pasted or imported either. Everyone already on
+  the wheel stays, and the stage line under the wheel says *Entries closed*.
+- It turns into **Reopen entries**. On a draw it is shared by every laptop of that draw (the same switch as
+  Settings → Phone sign-ups → *Sign-ups open*). **New event** opens entries again.
+
+**Record spin (MP4) for an LED screen**
+- When the venue's LED screen can't show the laptop, press **Record spin (MP4)** next to SPIN. It is a real
+  draw, exactly like SPIN (round, prize, winner log, Excel), and a few seconds after the wheel stops an MP4 video
+  of it downloads by itself, e.g. `Newcastle 26-10-2026 round 3.mp4`: the logo, title, event, round and prize,
+  the same wheel spinning and landing on the winner, then the winner card with confetti (about 16 s). Give that
+  file to the people running the LED screen.
+- The winner card shows *Making the video… 40%*, then *Video saved* with **Download again** (or **Cancel**).
+  If entries are still open, it offers **Close entries first**. A **No-show — draw again** after a recorded draw
+  is recorded too (`… round 3 redraw.mp4`).
+- 1920 × 1080 at 60 frames a second (30, or 1280 × 720, on browsers that can't do that), H.264, which every LED
+  media player and PC can play. It has the ticks and fanfare when Sound is on and the browser can make AAC sound
+  (Chrome and Edge on Windows and Mac can); otherwise it is silent. Phone numbers and emails never appear in it.
+- It is made on the laptop, in Google Chrome, Microsoft Edge or a recent Safari; nothing is uploaded. Making it
+  takes about as long as the video, or a little longer on older laptops.
+
 **Event mode**
 - Press **Event mode** or **F** to go full screen and keep the screen awake. Only the logo, title,
   prize, wheel and SPIN button are shown, with no entrant counts (no "Round N" line under SPIN).
