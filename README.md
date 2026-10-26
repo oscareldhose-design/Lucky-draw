@@ -56,7 +56,10 @@ accounts, adverts, tracking or network requests.
 1. Upload the same two files into the folders `draw`, `draw2` … `draw10` (only as many as you need) and set
    `ADMIN_PASSWORD` in each `api.php`. Each folder is a separate draw: its own sign-ups, Excel backup and New event.
 2. One QR code for all of them: `https://themaap.co.uk/draw/`. Guests go straight to the event that's running;
-   when several are running they tap theirs under **Which event are you at?** (listed by event name).
+   when several are running they tap theirs under **Which event are you at?** (listed by event name). An event
+   counts as running while its laptop is on it, and also for 12 hours after its laptop was last connected (laptop
+   asleep, lid shut, Wi-Fi dropped) as long as its sign-ups are open. Close sign-ups or clear the draw when an
+   event is over, so guests at the next one aren't offered it.
 3. Organisers always open `https://themaap.co.uk/draw/#wheel`. If Draw 1 is in use on another laptop, the page
    moves to the first free draw after 5 seconds (or **Stay on Draw 1 (same event)** / **This is my event —
    continue it**); the header shows which draw you're on. A draw is free again as soon as its laptop logs out, or
@@ -73,7 +76,13 @@ accounts, adverts, tracking or network requests.
    your name filled in, so a running event is never deleted by mistake. A laptop whose
    draw is restarted by New event on another laptop is offered that event's Excel one last time. Guests see the
    event's name above the form.
-6. Wheels, logins and guests' "already entered" memory are kept apart per draw, even in one browser.
+6. **All draws — clear any draw**: on **Name your event** (*All draws — clear an old event*) and in
+   **Settings → Phone sign-ups**. It lists Draw 1 … Draw 10 with the event each one holds, whether a laptop is
+   using it, and when it was last used. **Clear** on a draw deletes its sign-ups, winners and Excel backup on the
+   server (type CLEAR; **Download its Excel first** is offered), without opening that draw. Any laptop still on it
+   empties its wheel and asks for a new event name. Clearing another draw uses the organiser password: it isn't
+   asked again if you typed it on this page, otherwise once. **Clear** on your own draw is the same as New event.
+7. Wheels, logins and guests' "already entered" memory are kept apart per draw, even in one browser.
 
 The first visit opens a short **How it works** guide. You can reopen it any time with the **?**
 button.

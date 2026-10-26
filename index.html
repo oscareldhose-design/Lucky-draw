@@ -809,6 +809,21 @@ body.event-mode .ev-chip { display: none; }
 .ev-run-text .k { font-weight: 400; color: var(--text-2); }
 .ev-run-text strong { font-weight: 700; }
 .ev-run-btn .ic { flex: none; color: var(--accent-ink); width: 22px; height: 22px; }
+.ev-draws { margin-top: 2px; }
+/* All draws: one row per draw folder, its event and a Clear button */
+.draws-card { width: min(600px, calc(100vw - 32px)); }
+.draws-card .modal-title { padding-right: 40px; }
+.dw-msg { font-size: 15px; color: var(--text-2); }
+.dw-msg:empty { display: none; }
+.dw-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.dw-row { display: flex; align-items: center; gap: 12px; padding: 10px 12px 10px 16px; border-radius: 14px; border: 1.5px solid var(--line-strong); background: var(--surface); }
+.dw-row[data-empty] { background: var(--surface-2); border-style: dashed; }
+.dw-info { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.dw-label { font-size: 13px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--text-2); }
+.dw-name { font-size: 17px; line-height: 1.3; color: var(--heading); font-weight: 700; overflow-wrap: anywhere; }
+.dw-row[data-empty] .dw-name { font-weight: 400; color: var(--text-2); }
+.dw-meta { font-size: 14px; line-height: 1.35; color: var(--text-2); }
+.dw-row .btn { flex: none; }
 /* Guest: the event's name above the form */
 .su-event { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; margin: -12px 0 -8px; }
 .su-event .eyebrow { color: var(--text-2); }
@@ -1118,6 +1133,7 @@ body.event-mode .ev-chip { display: none; }
             <button type="button" class="btn btn-secondary" id="psResync"><svg class="ic ic-sm" aria-hidden="true"><use href="#i-undo"/></svg>Re-sync all</button>
             <button type="button" class="btn btn-ghost" id="psLogout"><svg class="ic ic-sm" aria-hidden="true"><use href="#i-lock"/></svg>Log out</button>
           </div>
+          <div class="btn-row" id="psDrawsRow" hidden><button type="button" class="btn btn-secondary" id="psDraws" data-open-draws><svg class="ic ic-sm" aria-hidden="true"><use href="#i-trash"/></svg>All draws — clear any draw</button></div>
           <div class="btn-row"><button type="button" class="btn btn-danger" id="psClear"><svg class="ic ic-sm" aria-hidden="true"><use href="#i-trash"/></svg>Clear all sign-ups on the server</button></div>
         </fieldset>
         <fieldset class="set-group">
@@ -1383,6 +1399,7 @@ body.event-mode .ev-chip { display: none; }
         <p class="ev-running-title" id="evRunningTitle">Or continue an event that’s already running:</p>
         <ul class="ev-running-list" aria-labelledby="evRunningTitle"></ul>
       </div>
+      <button type="button" class="btn btn-secondary btn-block ev-draws" id="evDraws" data-open-draws hidden><svg class="ic ic-sm" aria-hidden="true"><use href="#i-trash"/></svg>All draws — clear an old event</button>
     </div>
   </div>
 </section>
@@ -1426,6 +1443,18 @@ body.event-mode .ev-chip { display: none; }
       <button type="submit" class="btn btn-primary btn-lg" id="cdOk">OK</button>
     </div>
   </form>
+</dialog>
+
+<!-- All draws: every uploaded draw folder, the event it holds, and Clear (makes that draw fresh for a new event) -->
+<dialog class="modal" id="drawsDialog" aria-labelledby="dwTitle" aria-describedby="dwText">
+  <div class="modal-card draws-card">
+    <button type="button" class="icon-btn modal-close" id="dwClose" aria-label="Close"><svg class="ic" aria-hidden="true"><use href="#i-x"/></svg></button>
+    <h2 class="modal-title" id="dwTitle">All draws</h2>
+    <p class="modal-text" id="dwText">Clear a draw to make it fresh for a new event. Clearing deletes that draw’s sign-ups, winners and Excel backup on your server for good.</p>
+    <p class="dw-msg" id="dwMsg" role="status"></p>
+    <ul class="dw-list" id="dwList" aria-labelledby="dwTitle"></ul>
+    <div class="modal-actions"><button type="button" class="btn btn-primary btn-lg" id="dwDone">Done</button></div>
+  </div>
 </dialog>
 
 <!-- How it works -->
@@ -3002,7 +3031,9 @@ $('#cdExtra').addEventListener('click', () => {
   const msg = st.extra.onClick();
   if (confirmState === st) $('#cdExtraMsg').textContent = typeof msg === 'string' ? msg : '';
 });
-confirmDialog.addEventListener('close', () => { if (confirmState) endConfirm(null); });
+// Closed by the browser (Esc): cancel. The close event of an earlier question can arrive after the next one has opened
+// (e.g. a quick server answer in between), so only a dialog that is really closed counts.
+confirmDialog.addEventListener('close', () => { if (confirmState && !confirmDialog.open) endConfirm(null); });
 
 function download(filename, data, type) {
   try {
@@ -3988,6 +4019,132 @@ $('#helpOk').addEventListener('click', closeHelp);
 $('#helpClose').addEventListener('click', closeHelp);
 
 /* ---------------------------------------------------------------------
+   All draws: every draw folder with the event it holds, and Clear — any draw can be made fresh from here, without
+   going into it and starting a new event there. Another draw is cleared through its own api.php: this laptop logs in
+   there with the organiser password (unless it already is), clears it and logs out again.
+   --------------------------------------------------------------------- */
+const drawsDialog = $('#drawsDialog');
+let drawsBusy = false;
+let drawsToken = 0;
+async function openDraws() {
+  if (!PAGE_SLOT || appMode !== 'organiser' || !sync.authed) return;
+  try { if (!drawsDialog.open) drawsDialog.showModal(); } catch (e) { drawsDialog.setAttribute('open', ''); }
+  $('#dwDone').focus({ preventScroll: true });
+  await loadDraws();
+}
+function closeDraws() { if (drawsDialog.open) drawsDialog.close(); }
+async function loadDraws() {
+  const token = ++drawsToken;
+  $('#dwMsg').textContent = 'Checking the draws…';
+  const slots = await fetchSlots({ timeout: 6000 });
+  if (token !== drawsToken) return;
+  noteSlots(slots); // "Continue: …" and the other-events notes follow
+  const shown = slots.filter(x => x.present);
+  $('#dwMsg').textContent = shown.length ? '' : 'Couldn’t reach the draws. Check your internet connection and try again.';
+  $('#dwList').replaceChildren(...shown.map(drawRow));
+}
+/** "5 minutes ago", "3 hours ago", "2 days ago". */
+function agoText(s) {
+  if (s < 90) return 'just now';
+  if (s < 3600) return `${plural(Math.round(s / 60), 'minute')} ago`;
+  if (s < 48 * 3600) return `${plural(Math.round(s / 3600), 'hour')} ago`;
+  return `${plural(Math.round(s / 86400), 'day')} ago`;
+}
+function drawRow(slot) {
+  const c = slot.cfg;
+  const mine = slot.name === PAGE_SLOT.name;
+  const held = !!(c.eventName || c.hasEvent);
+  const meta = [mine ? 'This laptop' : slot.live ? 'In use on a laptop now' : '',
+    held && !slot.live && c.lastActiveAgo != null ? `Last used ${agoText(c.lastActiveAgo)}` : '',
+    held && !c.open ? 'Sign-ups closed' : ''].filter(Boolean).join(' · ');
+  return h('li', { class: 'dw-row', dataset: held ? { slot: slot.name } : { slot: slot.name, empty: '' } },
+    h('div', { class: 'dw-info' },
+      h('span', { class: 'dw-label', text: slot.label }),
+      h('span', { class: 'dw-name', dir: 'auto', text: c.eventName ? `“${c.eventName}”` : held ? 'Sign-ups from an earlier event' : 'Empty — ready for a new event' }),
+      meta ? h('span', { class: 'dw-meta', text: meta }) : null),
+    held ? h('button', { type: 'button', class: 'btn btn-danger btn-sm', 'aria-label': `Clear ${slot.label}`, onclick: () => clearDraw(slot) },
+      icon('trash'), 'Clear') : null);
+}
+async function clearDraw(slot) {
+  if (drawsBusy) return;
+  if (slot.name === PAGE_SLOT.name) {
+    // This laptop's own draw: the same as New event here (it empties this wheel too, then asks for the new name).
+    if (isLocked()) { toast('Finish the current draw first.'); return; }
+    closeDraws();
+    newEvent({ fromStep: evStepOpen });
+    return;
+  }
+  drawsBusy = true;
+  for (const b of $$('#dwList .btn')) b.disabled = true;
+  let auth = null;
+  try {
+    auth = await logInToDraw(slot);
+    if (!auth) return;
+    const now = await api('config', { url: slot.apiUrl, timeout: 6000 }); // as it is now (the list may be a minute old)
+    if (now.ok) slot.cfg = cleanPublicConfig(now.data);
+    if (!slot.cfg.eventName && !slot.cfg.hasEvent) { toast(`${slot.label} is already empty.`); return; }
+    const name = slot.cfg.eventName;
+    const v = await askConfirm({
+      title: `Clear ${slot.label}?`,
+      text: `This permanently deletes ${name ? `“${name}”: ` : ''}everyone who entered on ${slot.label}, its winners and its Excel backup on your server. `
+        + 'The old Excel file can’t be downloaded again afterwards.'
+        + (slot.live ? ` A laptop is using ${slot.label} right now: its wheel is emptied too.` : '')
+        + ' Type CLEAR to confirm.',
+      ok: `Clear ${slot.label}`, danger: true,
+      extra: { label: 'Download its Excel first', onClick: () => {
+        const st = confirmState;
+        downloadServerXlsx(slot.apiUrl, `${safeFileName(name || slot.label)} ${todayDMY()}`).then(r => {
+          if (confirmState === st) $('#cdExtraMsg').textContent = r === true ? 'Downloaded — check your Downloads folder.' : r === false ? '' : 'Couldn’t download it. Try again in a moment.';
+        });
+        return 'Downloading…';
+      } },
+      input: { label: 'Type CLEAR to confirm', type: 'text', inputMode: 'text', maxLength: 20, autocapitalize: 'characters' },
+      validate: val => (val.trim().toUpperCase() === 'CLEAR' ? '' : 'Type CLEAR to confirm.')
+    });
+    if (v == null) return;
+    const r = await api('clear', { method: 'POST', body: { confirm: 'DELETE' }, admin: true, url: slot.apiUrl });
+    if (r.ok) toast(`${slot.label} cleared — it’s ready for a new event.`);
+    else toast(`Couldn’t clear ${slot.label} — nothing was deleted. Try again.`, { type: 'error' });
+  } finally {
+    // Logged in only to clear it: log out again, so this laptop doesn't count as using that draw.
+    if (auth && auth.temp) await api('logout', { method: 'POST', body: {}, admin: true, url: slot.apiUrl, timeout: 5000 });
+    drawsBusy = false;
+    if (drawsDialog.open) await loadDraws();
+  }
+}
+/** Logged in to another draw folder: { temp } (temp: logged in just now), or null (cancelled, or it failed — said). */
+async function logInToDraw(slot) {
+  const s = await api('session', { admin: true, url: slot.apiUrl, query: { soft: 1 } });
+  if (s.ok) return { temp: false }; // this browser is already logged in there
+  if (s.network || s.notApi || s.status >= 500) { toast(`Couldn’t reach ${slot.label}. Try again in a moment.`, { type: 'error' }); return null; }
+  let pass = orgPass;
+  let note = '';
+  for (;;) {
+    if (!pass) {
+      pass = await askConfirm({
+        title: `Log in to ${slot.label}`,
+        text: `${note}Enter the organiser password to clear ${slot.label}.`,
+        ok: 'Continue',
+        input: { label: 'Password', type: 'password', inputMode: 'text', maxLength: 200 },
+        validate: val => (val ? '' : 'Please enter the password.')
+      });
+      if (pass == null) return null;
+    }
+    const r = await api('login', { method: 'POST', body: { password: pass }, admin: true, query: { soft: 1 }, url: slot.apiUrl });
+    if (r.ok) { orgPass = pass; return { temp: true }; }
+    if (r.code === 'bad_password') { orgPass = ''; pass = ''; note = 'That password isn’t right. '; continue; }
+    toast(r.code === 'locked' || r.status === 429 ? 'Too many wrong passwords. Please wait 15 minutes and try again.'
+      : r.code === 'password_not_set' ? `${slot.label} has no password yet: set ADMIN_PASSWORD in its api.php.`
+      : `Couldn’t log in to ${slot.label}. Try again in a moment.`, { type: 'error' });
+    return null;
+  }
+}
+document.addEventListener('click', ev => { if (ev.target.closest('[data-open-draws]')) openDraws(); });
+$('#dwDone').addEventListener('click', closeDraws);
+$('#dwClose').addEventListener('click', closeDraws);
+drawsDialog.addEventListener('close', () => { drawsToken++; });
+
+/* ---------------------------------------------------------------------
    Event name (SPEC 2.20): "Name your event" always comes before the wheel — on every device, offline and on the
    website (after logging in) — and the name, with the date it was first set, names the Excel and CSV files.
    --------------------------------------------------------------------- */
@@ -4576,13 +4733,24 @@ async function startGuest(probe) {
   signupEl.hidden = false;
   routeGuest(slots);
 }
+/* How long a named event still counts as running for guests after its laptop last checked in: a laptop that has gone
+   to sleep, lost its Wi-Fi or closed its tab still has guests arriving. Clearing a draw (or New event) removes its
+   event name, so it drops out straight away. */
+const GUEST_RECENT_S = 12 * 3600;
+/** The events guests can enter now: every draw with a named event whose laptop is on it, or was in the last 12 hours
+    and still takes sign-ups. None named yet: any draw a laptop is running. */
+function runningEvents(slots) {
+  const named = slots.filter(x => x.present && x.cfg.eventName && (x.live
+    || (x.cfg.open && !x.cfg.full && x.cfg.lastActiveAgo != null && x.cfg.lastActiveAgo < GUEST_RECENT_S)));
+  return named.length ? named : slots.filter(x => x.live);
+}
 /**
  * 0 events running: this folder's own form (or its closed / full message). 1: straight to that event's form, even
- * if it is another draw (no visible switch). 2 or more: "Which event are you at?". keep: a re-check that leaves a
- * guest on the event they chose while it is still running.
+ * if it is another draw (no visible switch; its name shows above the form). 2 or more: "Which event are you at?".
+ * keep: a re-check that leaves a guest on the event they chose while it is still running.
  */
 function routeGuest(slots, { keep = false } = {}) {
-  const live = slots.filter(x => x.live);
+  const live = runningEvents(slots);
   if (live.length >= 2) {
     guestLive = live;
     const still = keep && guestPicked && guestTarget && live.find(x => x.name === guestTarget.name);
@@ -4813,6 +4981,9 @@ const sync = {
 };
 let localStarted = false;
 let loginBusy = false;
+/* The organiser password typed on this page, kept in memory only (never stored): "All draws" uses it to log in to
+   another draw folder to clear it, so it isn't asked again. After a reload it is asked once, when needed. */
+let orgPass = '';
 let loginWait = 0;
 const loginEl = $('#login');
 /** The guests' sign-up address (the client makes the QR code from it): this page without #wheel / ?wheel — in the
@@ -5008,7 +5179,7 @@ onFormSubmit($('#liForm'), async () => {
   loginBusy = false;
   btn.disabled = false;
   btn.textContent = 'Log in';
-  if (r.ok) { inp.value = ''; setLoginMsg(''); enterOrganiserApp({ fresh: true }); return; }
+  if (r.ok) { orgPass = inp.value; inp.value = ''; setLoginMsg(''); enterOrganiserApp({ fresh: true }); return; }
   setLoginMsg(r.code === 'password_not_set' ? 'Open api.php and set ADMIN_PASSWORD first.'
     : r.code === 'locked' || r.status === 429 ? 'Too many wrong passwords. Please wait 15 minutes and try again.'
     : r.code === 'bad_password' || r.status === 401 ? 'That password isn’t right. Please try again.'
@@ -5034,6 +5205,8 @@ async function enterOrganiserApp({ fresh = false } = {}) {
   $('#phoneSet').hidden = false;
   $('#psAddr').value = guestAddress();
   $('#psAddrSlots').hidden = !PAGE_SLOT;
+  $('#psDrawsRow').hidden = !PAGE_SLOT; // "All draws": clear any draw folder
+  $('#evDraws').hidden = !PAGE_SLOT;
   $('#sEventNameHelp').textContent = 'Names your Excel files, e.g. “Newcastle 10-10-2026.xlsx”. When more than one event is running, guests pick yours by this name.';
   $('#footStore').textContent = 'Entries are stored in this browser; phone sign-ups also on your web server.';
   $('#dataNote').textContent = 'Everything is stored in this browser on this device, and phone sign-ups also on your web server (see Phone sign-ups above). Export before you clear it.';
@@ -5255,7 +5428,7 @@ async function refreshSlots() {
     (an organiser checked in within the last 12 hours) that this laptop could continue (SPEC 2.23). */
 function noteSlots(slots) {
   if (!PAGE_SLOT) return;
-  otherLive = slots.filter(x => x.live && x.name !== PAGE_SLOT.name);
+  otherLive = runningEvents(slots).filter(x => x.name !== PAGE_SLOT.name); // what guests are offered besides this one
   otherEvents = slots.filter(x => x.present && x.name !== PAGE_SLOT.name && x.cfg.hasEvent && x.cfg.eventName
     && x.cfg.lastActiveAgo != null && x.cfg.lastActiveAgo < 12 * 3600);
   renderOthers();
@@ -5413,11 +5586,10 @@ $('#psOpen').addEventListener('change', async ev => {
   toast(want ? 'Sign-ups are open: guests can enter from their phones.' : 'Sign-ups are closed: guests now see “Entries are now closed.”');
 });
 /* The server rebuilds an Excel backup (Name | Phone number | Email) after every phone sign-up; this fetches it. */
-$('#psXlsx').addEventListener('click', async ev => {
-  const b = ev.currentTarget;
-  if (!sync.on) return;
-  b.disabled = true;
-  const url = new URL(API_URL);
+/** Downloads a draw's Excel backup from the server (this draw's, or another draw folder's while logged in there).
+    Returns the HTTP status (0: no answer), or true once the file is downloading. */
+async function downloadServerXlsx(apiUrl = API_URL, fallbackStem = exportStem()) {
+  const url = new URL(apiUrl);
   url.searchParams.set('action', 'exportXlsx');
   let res = null, bytes = null;
   try {
@@ -5425,19 +5597,23 @@ $('#psXlsx').addEventListener('click', async ev => {
     if (res.ok) bytes = await res.arrayBuffer();
   } catch (e) { res = null; }
   // "<Event name> <DD-MM-YYYY> (server backup).xlsx": the server's name for it (RFC 6266 filename*), else ours.
-  let name = `${exportStem()} (server backup).xlsx`;
+  let name = `${fallbackStem} (server backup).xlsx`;
   try {
     const m = /filename\*\s*=\s*UTF-8''([^;]+)/i.exec((res && res.headers.get('Content-Disposition')) || '');
     const n = m ? cleanLine(decodeURIComponent(m[1].trim())) : '';
     if (n && /\.xlsx$/i.test(n) && !/[\\/:*?"<>|]/.test(n)) name = n;
   } catch (e) { /* keep ours */ }
+  if (!bytes || new Uint8Array(bytes.slice(0, 2))[0] !== 0x50) return res ? res.status || 0 : 0;
+  return download(name, new Blob([bytes], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
+}
+$('#psXlsx').addEventListener('click', async ev => {
+  const b = ev.currentTarget;
+  if (!sync.on) return;
+  b.disabled = true;
+  const r = await downloadServerXlsx();
   b.disabled = false;
-  if (res && res.status === 401) { requireLogin(); return; }
-  if (!bytes || new Uint8Array(bytes.slice(0, 2))[0] !== 0x50) {
-    toast('Couldn’t download the Excel backup from the server. Try again in a moment.', { type: 'error' });
-    return;
-  }
-  download(name, new Blob([bytes], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
+  if (r === 401) { requireLogin(); return; }
+  if (r !== true && r !== false) toast('Couldn’t download the Excel backup from the server. Try again in a moment.', { type: 'error' });
 });
 $('#psResync').addEventListener('click', async ev => {
   const b = ev.currentTarget;
@@ -5484,6 +5660,7 @@ $('#psLogout').addEventListener('click', async () => {
   evDetach();
   await api('logout', { method: 'POST', body: {}, admin: true });
   sync.authed = false;
+  orgPass = '';
   lsSet(ORGANISER_KEY, '0');
   sync.reconciled = false;
   updatePill();
@@ -5958,7 +6135,7 @@ wheelEl.addEventListener('click', () => {
   if (!wheelEntries.length) return toast('Add entries to start.');
   spin();
 });
-function anyModalOpen() { return winnerDialog.open || confirmDialog.open || helpDialog.open; }
+function anyModalOpen() { return winnerDialog.open || confirmDialog.open || helpDialog.open || drawsDialog.open; }
 document.addEventListener('keydown', ev => {
   if (ev.defaultPrevented || ev.ctrlKey || ev.metaKey || ev.altKey || signupOpen || evStepOpen) return;
   if (ev.key === 'Escape' && eventMode && !anyModalOpen()) { exitEvent(); return; } // browsers usually handle Esc in full screen themselves (fullscreenchange)
