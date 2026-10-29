@@ -296,6 +296,10 @@ svg { flex: none; }
 .spin-btn:disabled { filter: grayscale(.55) opacity(.55); cursor: not-allowed; }
 .spin-btn:focus-visible { outline-offset: 5px; border-radius: 999px; }
 .record-btn { align-self: center; }
+@media (min-width: 1024px) {
+  body:not(.event-mode) .stage:not(.is-side) .prize-field { flex: 1 1 160px; max-width: 340px; }
+  .record-btn { padding: 0 16px; font-size: 16px; }
+}
 .record-btn .ic, .vid-line .ic { color: #d1124a; flex: none; }
 body.event-mode .record-btn, body.event-mode .rec-jobs { display: none; }
 .vid-line { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 2px 10px; font-size: 14px; font-weight: 700; color: var(--text-2); overflow-wrap: anywhere; }
@@ -3378,17 +3382,22 @@ async function makeSpinVideo(rec, entry, onProgress, shouldStop) {
   b.textBaseline = 'alphabetic';
   b.textAlign = 'left';
   b.fillStyle = '#ffffff';
+  // Right-to-left text is laid out as such, so a cut one ends in "…" at its own end (left/right anchors don't move).
+  const dirOf = t => (isRtl(t) ? 'rtl' : 'ltr');
   const title = fitVideoText(b, S().title || DEFAULTS.title, 640 * k, 62 * k, 34 * k);
+  b.direction = dirOf(title);
   b.fillText(title, pl + plate + 28 * k, pt + 62 * k);
-  const evLine = [state.ev.name, state.ev.date].filter(Boolean).join(' · ');
-  if (evLine) { b.fillStyle = '#e7b3e7'; b.fillText(fitVideoText(b, evLine, 640 * k, 34 * k, 22 * k), pl + plate + 28 * k, pt + 112 * k); }
+  // (the date isolated left-to-right, so its digits keep their order next to a right-to-left event name)
+  const evLine = [state.ev.name, state.ev.date ? `\u2066${state.ev.date}\u2069` : ''].filter(Boolean).join(' · ');
+  if (evLine) { b.fillStyle = '#e7b3e7'; b.direction = dirOf(evLine); b.fillText(fitVideoText(b, evLine, 640 * k, 34 * k, 22 * k), pl + plate + 28 * k, pt + 112 * k); }
+  b.direction = 'ltr';
   b.textAlign = 'right';
   b.fillStyle = '#e7b3e7';
   b.font = `700 ${30 * k}px ${FONT}`;
   if ('letterSpacing' in b) b.letterSpacing = `${4 * k}px`;
   b.fillText(`ROUND ${rec.round}${rec.redraw ? ' · REDRAW' : ''}`, W - 60 * k, pt + 44 * k);
   if ('letterSpacing' in b) b.letterSpacing = '0px';
-  if (rec.prize) { b.fillStyle = '#ffffff'; b.fillText(fitVideoText(b, rec.prize, 700 * k, 46 * k, 26 * k), W - 60 * k, pt + 100 * k); }
+  if (rec.prize) { b.fillStyle = '#ffffff'; b.direction = dirOf(rec.prize); b.fillText(fitVideoText(b, rec.prize, 700 * k, 46 * k, 26 * k), W - 60 * k, pt + 100 * k); b.direction = 'ltr'; }
 
   const wheelCv = mkCanvas(D, D);
   paintWheel(wheelCv.getContext('2d'), D, rec.entries, segs, true);
@@ -3539,7 +3548,7 @@ async function makeSpinVideo(rec, entry, onProgress, shouldStop) {
   };
 
   // 5) Encode (pausing while a live spin runs here, so it stays smooth), then write the MP4.
-  const v = await encodeH264(setup, frames, draw, { onProgress: p => onProgress(0.06 + 0.92 * p), shouldStop, shouldPause: () => spinning || !!confettiRaf });
+  const v = await encodeH264(setup, frames, draw, { onProgress: p => onProgress(0.06 + 0.92 * p), shouldStop, shouldPause: () => !document.hidden && (spinning || !!confettiRaf) });
   if (!v) return null;
   const bytes = mp4Mux({ video: { width: W, height: H, fps, description: v.description, samples: v.samples }, audio });
   onProgress(1);
@@ -6457,10 +6466,12 @@ async function refreshConfig() {
   const c = cleanPublicConfig(r.data);
   sync.cfg = c;
   noteUploaded(c);
+  const was = sync.open;
   sync.open = c.open;
   sync.full = c.full;
   if (!sync.reconciled && sync.authed) { sync.reconciled = true; reconcileTexts(c); }
   updatePill();
+  if (was != null && was !== sync.open) renderAll(); // entries closed or reopened on another laptop
   return c;
 }
 /** Which other draws' events are running now (about every 30 s): the "Name your event" note and Settings hint. */
@@ -6541,16 +6552,19 @@ function reconcileTexts(c) {
   } else pushConfig();
 }
 const pushTextsSoon = debounce(() => { if (appMode === 'organiser' && sync.authed) pushConfig(); }, 800);
-/** Send the guests' texts and the open/closed switch to api.php (setConfig). */
+/** Send the guests' texts to api.php (setConfig), and the open/closed switch only when extra.open says so: another
+    laptop of the draw may have closed (or opened) entries since this one last looked, and a text change must never
+    undo that. The server's answer is the truth afterwards. */
 async function pushConfig(extra = {}) {
-  if (sync.open == null) await refreshConfig();
-  const body = { open: sync.open !== false, ...serverTexts(), ...extra };
+  const body = { ...serverTexts(), ...extra };
   const r = await api('setConfig', { method: 'POST', body, admin: true });
   if (r.status === 401) { requireLogin(); return r; }
   if (r.ok) {
-    sync.open = body.open;
-    if (r.data && r.data.config) sync.cfg = cleanPublicConfig(r.data.config);
+    const was = sync.open;
+    if (r.data && r.data.config) { sync.cfg = cleanPublicConfig(r.data.config); sync.open = sync.cfg.open; sync.full = sync.cfg.full; }
+    else if (typeof body.open === 'boolean') sync.open = body.open;
     updatePill();
+    if (was !== sync.open) renderAll(); // "Entries closed" under the wheel, the sign-up screen
   }
   else {
     toast('Couldn’t update the guests’ sign-up page.', {

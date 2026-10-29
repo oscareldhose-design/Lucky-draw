@@ -184,14 +184,19 @@ button.
   of it downloads by itself, e.g. `Newcastle 26-10-2026 round 3.mp4`: the logo, title, event, round and prize,
   the same wheel spinning and landing on the winner, then the winner card with confetti (about 16 s). Give that
   file to the people running the LED screen.
-- The winner card shows *Making the video… 40%*, then *Video saved* with **Download again** (or **Cancel**).
-  If entries are still open, it offers **Close entries first**. A **No-show — draw again** after a recorded draw
-  is recorded too (`… round 3 redraw.mp4`).
+- The winner card shows *Making the video… 40%*, then *Video saved* with **Download again**. The last three
+  videos also stay listed under the Record button (with **Download again**, **Cancel**, or **Try again**, which
+  remakes the same draw's video, never a new draw). Videos are made one after another, so a **No-show — draw
+  again** after a recorded draw gives both videos (`… round 3.mp4` and `… round 3 redraw.mp4`). If entries are
+  still open, Record offers **Close entries first**.
+- Leaving or reloading the page while a video is still being made asks first; a video that was cut off that way
+  can't be made again, and its winner card says so.
 - 1920 × 1080 at 60 frames a second (30, or 1280 × 720, on browsers that can't do that), H.264, which every LED
   media player and PC can play. It has the ticks and fanfare when Sound is on and the browser can make AAC sound
   (Chrome and Edge on Windows and Mac can); otherwise it is silent. Phone numbers and emails never appear in it.
 - It is made on the laptop, in Google Chrome, Microsoft Edge or a recent Safari; nothing is uploaded. Making it
-  takes about as long as the video, or a little longer on older laptops.
+  takes about as long as the video (longer on older laptops), and carries on if you switch to another tab.
+- Winner names of any length show in full (on two lines when long).
 
 **Event mode**
 - Press **Event mode** or **F** to go full screen and keep the screen awake. Only the logo, title,
