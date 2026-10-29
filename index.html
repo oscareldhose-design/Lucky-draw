@@ -296,10 +296,12 @@ svg { flex: none; }
 .spin-btn:disabled { filter: grayscale(.55) opacity(.55); cursor: not-allowed; }
 .spin-btn:focus-visible { outline-offset: 5px; border-radius: 999px; }
 .record-btn { align-self: center; }
-.record-btn .ic, .wd-video .ic { color: #d1124a; }
-body.event-mode .record-btn { display: none; }
-.wd-video { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 4px 10px; font-size: 15px; font-weight: 700; color: var(--text-2); overflow-wrap: anywhere; }
-.wd-video .link-btn { min-height: 36px; padding: 6px; }
+.record-btn .ic, .vid-line .ic { color: #d1124a; flex: none; }
+body.event-mode .record-btn, body.event-mode .rec-jobs { display: none; }
+.vid-line { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 2px 10px; font-size: 14px; font-weight: 700; color: var(--text-2); overflow-wrap: anywhere; }
+.vid-line .link-btn { min-height: 36px; padding: 6px; }
+.wd-video { font-size: 15px; }
+.rec-jobs { display: flex; flex-direction: column; align-items: center; gap: 0; }
 :root[data-theme="dark"] .spin-btn:not(:disabled) { box-shadow: 0 0 44px rgba(163, 8, 163, .65), inset 0 -5px 0 rgba(42, 0, 42, .45), inset 0 2px 0 rgba(255, 255, 255, .25); }
 .event-exit { display: none; }
 
@@ -1009,6 +1011,7 @@ body.event-mode .ev-chip { display: none; }
         <button type="button" class="spin-btn" id="spinBtn" disabled>SPIN</button>
         <button type="button" class="btn btn-secondary btn-lg record-btn" id="recordBtn" disabled title="Spin, and get an MP4 video of it for an LED screen"><svg class="ic ic-sm" aria-hidden="true"><use href="#i-rec"/></svg>Record spin (MP4)</button>
       </div>
+      <div class="rec-jobs" id="recJobs" hidden></div>
       <button type="button" class="event-exit" id="eventExit" title="Exit event mode (Esc)"><svg class="ic ic-sm" aria-hidden="true"><use href="#i-minimize"/></svg><span class="ev-label">Exit event mode</span></button>
     </section>
 
@@ -1434,7 +1437,8 @@ body.event-mode .ev-chip { display: none; }
       <button type="button" class="btn btn-secondary btn-lg" data-wd="keep">Keep on wheel</button>
       <button type="button" class="btn btn-ghost btn-lg" data-wd="noshow">No-show — draw again</button>
     </div>
-    <p class="wd-video" id="wdVideo" hidden><svg class="ic ic-sm" aria-hidden="true"><use href="#i-rec"/></svg><span id="wdVideoText"></span><button type="button" class="link-btn" id="wdVideoAgain" hidden>Download again</button><button type="button" class="link-btn" id="wdVideoStop" hidden>Cancel</button></p>
+    <p class="vid-line wd-video" id="wdVideo" hidden><svg class="ic ic-sm" aria-hidden="true"><use href="#i-rec"/></svg><span class="vid-text"></span><button type="button" class="link-btn" data-vid="again" hidden>Download again</button><button type="button" class="link-btn" data-vid="retry" hidden>Try again</button><button type="button" class="link-btn" data-vid="stop" hidden>Cancel</button></p>
+    <p class="sr-only" id="wdVideoLive" aria-live="polite"></p>
     <p class="wd-hint" id="wdHint"></p>
   </div>
 </dialog>
@@ -1755,7 +1759,17 @@ function todayDMY(d = new Date()) { return `${pad2(d.getDate())}-${pad2(d.getMon
     keyed by deviceId(); { logId: '' } = finished). Only the laptop that drew the winner shows the card. */
 function cleanPending(p) {
   if (!p || typeof p !== 'object' || !p.logId) return null;
-  return { logId: str(p.logId, 64), redraw: !!p.redraw, marked: !!p.marked };
+  const video = cleanVideoSetup(p.video);
+  return { logId: str(p.logId, 64), redraw: !!p.redraw, marked: !!p.marked, ...(video ? { video } : {}) };
+}
+/** "Record spin": the H.264 set-up the draw's video was made with (see pickH264), or null. */
+function cleanVideoSetup(v) {
+  if (!v || typeof v !== 'object' || !v.config || typeof v.config !== 'object') return null;
+  const int = (x, lo, hi) => Number.isInteger(x) && x >= lo && x <= hi;
+  const c = v.config;
+  if (typeof c.codec !== 'string' || !/^avc1\.[0-9a-f]{6}$/i.test(c.codec) || !int(v.width, 160, 4096) || !int(v.height, 90, 2160) || !int(v.fps, 1, 120)) return null;
+  const bitrate = int(c.bitrate, 1e5, 1e8) ? c.bitrate : 8e6;
+  return { config: { codec: c.codec, width: v.width, height: v.height, framerate: v.fps, bitrate, avc: { format: 'avc' } }, width: v.width, height: v.height, fps: v.fps };
 }
 function cleanPend(raw) {
   const out = {};
@@ -1764,6 +1778,7 @@ function cleanPend(raw) {
     if (!v || typeof v !== 'object' || !/^[A-Za-z0-9_-]{1,40}$/.test(k)) continue;
     const p = cleanPending(v);
     out[k] = { logId: p ? p.logId : '', redraw: !!(p && p.redraw), marked: !!(p && p.marked), updatedAt: num(v.updatedAt, 0) };
+    if (p && p.video) out[k].video = p.video;
     // claim: the person this laptop is drawing right now (its wheel is turning), so no other laptop draws them too;
     // claimFor: how long that draw takes at most (ms), after which the claim lapses (that laptop went away mid-spin)
     if (!p && typeof v.claim === 'string' && v.claim) {
@@ -1833,7 +1848,8 @@ function myPending() {
 }
 /** Remember (p) or finish (null) this laptop's open winner card. */
 function setMyPending(p) {
-  state.pend = { ...state.pend, [deviceId()]: { logId: p ? p.logId : '', redraw: !!(p && p.redraw), marked: !!(p && p.marked), updatedAt: stamp() } };
+  const video = p ? cleanVideoSetup(p.video) : null;
+  state.pend = { ...state.pend, [deviceId()]: { logId: p ? p.logId : '', redraw: !!(p && p.redraw), marked: !!(p && p.marked), ...(video ? { video } : {}), updatedAt: stamp() } };
 }
 /* Another laptop on this draw is drawing these people right now (its claim lasts as long as its spin, at most a
    minute): they're left off this laptop's wheel until that draw lands (SPEC 2.24: never drawn on two laptops), and
@@ -2535,7 +2551,10 @@ let winnerOpen = false;   // a winner is being revealed or shown: the wheel stay
 let currentWin = null;
 let drawRound = 0;        // round of the draw in progress; written to state only when the wheel lands
 let revealTimer = 0;
-let videoJob = null;      // "Record spin": { logId, name, state: 'making' | 'ready' | 'failed', pct, blob, stop }
+// "Record spin": this page's recorded draws, oldest first, made one after another:
+// { logId, rec, entry, name, round, redraw, state: 'waiting' | 'making' | 'ready' | 'failed' | 'cancelled' | 'lost', pct, blob, stop }
+const videoJobs = [];
+let videoRunning = null;
 const reduceMQ = window.matchMedia('(prefers-reduced-motion: reduce)');
 const easeOutQuart = p => 1 - Math.pow(1 - p, 4);
 /** The wheel's rotation (rad, clockwise) el ms into a spin { from, delta, duration, wind, windAmt }: a short pull-back,
@@ -2585,13 +2604,14 @@ function spin(opts = {}) {
   if (signupOpen) return Promise.resolve(null);
   if (winnerOpen) finishWinner(defaultWinnerAction());
   if (!evOn()) return spinNow(opts);
-  if (!opts.redraw && evRedraw) opts = { ...opts, redraw: evRedraw }; // a no-show redraw that had to wait (see below)
+  // A no-show redraw that had to wait (see below), still recorded if its draw was
+  if (!opts.redraw && evRedraw) opts = { ...opts, redraw: evRedraw, ...(evRedraw.record && !opts.record ? { record: evRedraw.record } : {}) };
   const go = pick => {
     spinPrep = null;
     if (pick && pick.busy) {
       // One winner at a time on a draw: another laptop is drawing right now (R1-2). A no-show redraw keeps its round.
       evDropClaim();
-      if (opts.redraw) evRedraw = opts.redraw;
+      if (opts.redraw) evRedraw = opts.record ? { ...opts.redraw, record: opts.record } : opts.redraw;
       toast(DRAWING_ELSEWHERE_MSG, { detail: opts.redraw ? `Then press SPIN to draw again for round ${opts.redraw.round}.` : 'Then press SPIN again.' });
       renderAll();
       return Promise.resolve(null);
@@ -2668,7 +2688,11 @@ function spinNow(opts, pick = null) {
       const entry = entries[winIdx];
       onLanded(entry, round, prize, winIdx, !!opts.redraw);
       if (recording) {
-        if (currentWin) currentWin.recorded = recording.setup; // a no-show redraw of this winner is recorded too
+        if (currentWin) {
+          currentWin.recorded = recording.setup; // a no-show redraw of this winner is recorded too (also after a reload)
+          setMyPending({ ...myPending(), video: recording.setup });
+          commit();
+        }
         startSpinVideo(recording, entry, currentWin ? currentWin.rec.id : '');
       }
       resolve(JSON.parse(JSON.stringify(entry)));
@@ -2956,6 +2980,17 @@ function mp4Mux({ video, audio = null }) {
   }
   return out;
 }
+/** Lets other work run (a message to itself, which a hidden tab doesn't slow down like a timer). */
+const yieldTask = () => new Promise(r => { const ch = new MessageChannel(); ch.port1.onmessage = () => { ch.port1.close(); r(); }; ch.port2.postMessage(0); });
+/** Resolves once the encoder has taken a frame off its queue (or after 50 ms where it can't say). */
+function encoderDrop(enc) {
+  return new Promise(r => {
+    let t = 0;
+    const fin = () => { clearTimeout(t); if (enc.removeEventListener) enc.removeEventListener('dequeue', fin); r(); };
+    if (enc.addEventListener) enc.addEventListener('dequeue', fin);
+    t = setTimeout(fin, 50);
+  });
+}
 /** The first H.264 set-up this browser can encode: 1080p at 60 frames a second if it can, else 30, else 720p. */
 async function pickH264() {
   if (typeof VideoEncoder === 'undefined' || typeof VideoFrame === 'undefined') return null;
@@ -2996,9 +3031,10 @@ async function encodeH264(setup, frameCount, draw, { onProgress = () => {}, shou
       const frame = new VideoFrame(canvas, { timestamp: Math.round(i * 1e6 / fps), duration: Math.round(1e6 / fps) });
       encoder.encode(frame, { keyFrame: i % (fps * 2) === 0 }); // a key frame every 2 s
       frame.close();
-      // Don't run ahead of the encoder (memory), and let the page breathe.
-      while (encoder.encodeQueueSize > 4 && !failed) await new Promise(r => setTimeout(r, 4));
-      if (i % 10 === 0) { onProgress(i / frameCount); await new Promise(r => setTimeout(r, 0)); }
+      // Don't run ahead of the encoder (memory), and let the page breathe. Neither wait uses timers, which browsers
+      // slow right down in a tab that isn't showing.
+      while (encoder.encodeQueueSize > 4 && !failed) await encoderDrop(encoder);
+      if (i % 3 === 0) { onProgress(i / frameCount); await yieldTask(); }
     }
     if (!failed && !shouldStop()) await encoder.flush();
   } catch (e) {
@@ -3061,71 +3097,130 @@ const mkCanvas = (w, h) => (typeof OffscreenCanvas !== 'undefined' ? new Offscre
 /** "Record spin (MP4)": checks the browser can make video, offers to close entries first, then spins and records. */
 async function recordSpin() {
   if (isLocked() || othersDrawing() || !wheelEntries.length) return;
-  if (videoJob && videoJob.state === 'making') { toast('A video is still being made — wait for it to finish.'); return; }
   const setup = await pickH264();
   if (!setup) {
     toast('This browser can’t make videos.', { type: 'error', detail: 'Open this page in Google Chrome or Microsoft Edge on this laptop to record a spin.', timeout: 9000 });
     return;
   }
+  const say = 'The winner is drawn now, exactly like pressing SPIN, and you get an MP4 video of the wheel landing on them'
+    + ` (${setup.height}p) to give to the LED screen. It downloads by itself once it is made.`;
   const open = !entriesClosed();
   const go = await askConfirm({
     title: 'Record this spin?',
-    text: 'The winner is drawn now, exactly like pressing SPIN, and you get an MP4 video of the wheel landing on them'
-      + ` (${setup.height}p) to give to the LED screen. It downloads by itself a few seconds after the wheel stops.`
-      + (open ? ' Entries are still open: close them first so nobody joins after the video.' : ''),
+    text: say + (open ? ' Entries are still open: close them first so nobody joins after the video.' : ''),
     ok: 'Spin and record',
     extra: open ? { label: 'Close entries first', icon: 'lock', onClick: () => {
       const st = confirmState;
-      setEntriesOpen(false).then(ok => { if (confirmState === st) $('#cdExtraMsg').textContent = ok ? 'Entries closed — nobody else can join.' : 'Couldn’t close entries. Try again.'; });
+      setEntriesOpen(false).then(ok => {
+        if (confirmState !== st) return;
+        $('#cdExtraMsg').textContent = ok ? 'Entries closed — nobody else can join.' : 'Couldn’t close entries. Try again.';
+        if (ok) { $('#cdText').textContent = say; $('#cdExtraRow').hidden = true; $('#cdOk').focus(); }
+      });
       return 'Closing entries…';
     } } : null
   });
   if (!go || isLocked()) return;
   spin({ record: setup });
 }
-/** Makes the video of a recorded draw in the background (the winner card shows how far it is), then downloads it. */
+/** Queues the video of a recorded draw; videos are made one after another in the background, then downloaded. */
 function startSpinVideo(rec, entry, logId) {
-  if (videoJob && videoJob.state === 'making') videoJob.stop = true;
-  const job = { logId, name: videoName(rec), state: 'making', pct: 0, blob: null, stop: false };
-  videoJob = job;
+  videoJobs.push({ logId, rec, entry, name: videoName(rec), round: rec.round, redraw: rec.redraw, state: 'waiting', pct: 0, blob: null, stop: false });
+  // Keep the last few videos for "Download again" (each is some tens of MB).
+  videoJobs.filter(j => j.blob).slice(0, -4).forEach(j => { j.blob = null; });
+  if (videoJobs.length > 30) videoJobs.splice(0, videoJobs.length - 30);
   renderVideoUI();
-  makeSpinVideo(rec, entry, p => { job.pct = p; renderVideoUI(); }, () => job.stop).then(blob => {
-    if (videoJob !== job) return;
-    if (!blob) { videoJob = null; renderVideoUI(); return; } // cancelled
-    job.blob = blob;
-    job.state = 'ready';
+  runVideoQueue();
+}
+async function runVideoQueue() {
+  if (videoRunning) return;
+  for (let job; (job = videoJobs.find(j => j.state === 'waiting'));) {
+    videoRunning = job;
+    job.state = 'making'; job.pct = 0; job.stop = false;
     renderVideoUI();
-    announce(`Video ready: ${job.name}`);
-    download(job.name, blob);
-    if (!(winnerDialog.open && currentWin && currentWin.rec.id === job.logId)) {
-      toast(`Video ready: ${job.name}`, { detail: 'Check your Downloads folder.', action: { label: 'Download again', fn: () => download(job.name, blob) } });
+    try {
+      const blob = await makeSpinVideo(job.rec, job.entry, p => { job.pct = p; renderVideoUI(); }, () => job.stop);
+      if (!blob) job.state = 'cancelled';
+      else {
+        job.blob = blob;
+        job.state = 'ready';
+        download(job.name, blob);
+        videoNews(`Video ready: ${job.name}`);
+      }
+    } catch (e) {
+      console.error('MAP Lucky Draw: video', e);
+      job.state = 'failed';
+      videoNews(`Couldn’t make the video of round ${job.round}. The draw itself is saved: choose Try again.`, true);
     }
-  }, e => {
-    console.error('MAP Lucky Draw: video', e);
-    if (videoJob !== job) return;
-    job.state = 'failed';
+    videoRunning = null;
     renderVideoUI();
-    toast('Couldn’t make the video.', { type: 'error', detail: 'The draw itself is saved. Try Record spin again, or use Google Chrome or Microsoft Edge.' });
-  });
-}
-/** The video line on the winner card, and the Record button. */
-function renderVideoUI() {
-  const job = videoJob;
-  const show = !!(job && currentWin && currentWin.rec.id === job.logId);
-  $('#wdVideo').hidden = !show;
-  if (show) {
-    const text = job.state === 'making' ? `Making the video… ${Math.round(job.pct * 100)}%`
-      : job.state === 'ready' ? `Video saved: ${job.name}` : 'Couldn’t make the video.';
-    if ($('#wdVideoText').textContent !== text) $('#wdVideoText').textContent = text;
-    $('#wdVideoAgain').hidden = job.state !== 'ready';
-    $('#wdVideoStop').hidden = job.state !== 'making';
   }
-  const rb = $('#recordBtn');
-  rb.disabled = $('#spinBtn').disabled || !!(job && job.state === 'making');
 }
+/** "Video ready" / "Couldn't make": spoken on the winner card when it is open (the page behind it is inert), else a toast. */
+function videoNews(msg, error = false) {
+  if (winnerDialog.open) $('#wdVideoLive').textContent = msg;
+  else {
+    announce(msg);
+    toast(msg, error ? { type: 'error' } : { detail: 'Check your Downloads folder.' });
+  }
+}
+const VIDEO_SAY = {
+  waiting: 'waiting for the one before', making: 'being made', ready: 'saved', failed: 'couldn’t be made',
+  cancelled: 'cancelled', lost: 'wasn’t finished before the page reloaded'
+};
+function videoLabel(job, file = false) {
+  const what = `Round ${job.round}${job.redraw ? ' redraw' : ''} video`;
+  if (job.state === 'making') return `${what}: making… ${Math.round(job.pct * 100)}%`;
+  if (job.state === 'ready') return file ? `Video saved: ${job.name}` : `${what} saved`;
+  return `${what} ${VIDEO_SAY[job.state]}`;
+}
+/** One video line (text + Download again / Try again / Cancel), kept as the same elements while the job changes. */
+function videoLine(job, el) {
+  if (!el) {
+    el = h('p', { class: 'vid-line' }, icon('rec'), h('span', { class: 'vid-text' }),
+      h('button', { type: 'button', class: 'link-btn', dataset: { vid: 'again' } }, 'Download again'),
+      h('button', { type: 'button', class: 'link-btn', dataset: { vid: 'retry' } }, 'Try again'),
+      h('button', { type: 'button', class: 'link-btn', dataset: { vid: 'stop' } }, 'Cancel'));
+  }
+  el._job = job;
+  const text = videoLabel(job, el.id === 'wdVideo');
+  const t = $('.vid-text', el);
+  if (t.textContent !== text) t.textContent = text;
+  $('[data-vid="again"]', el).hidden = !(job.state === 'ready' && job.blob);
+  $('[data-vid="retry"]', el).hidden = !((job.state === 'failed' || job.state === 'cancelled') && job.rec);
+  $('[data-vid="stop"]', el).hidden = !(job.state === 'making' || job.state === 'waiting');
+  return el;
+}
+/** The video line on the winner card, the list of recent videos under the Record button, and the Record button. */
+function renderVideoUI() {
+  const card = currentWin ? videoJobs.filter(j => j.logId === currentWin.rec.id).pop() : null;
+  const line = $('#wdVideo');
+  line.hidden = !card;
+  if (card) videoLine(card, line);
+  const box = $('#recJobs');
+  const recent = videoJobs.slice(-3);
+  box.hidden = !recent.length;
+  const rows = recent.map(j => videoLine(j, Array.from(box.children).find(el => el._job === j)));
+  if (rows.length !== box.children.length || rows.some((el, i) => box.children[i] !== el)) box.replaceChildren(...rows);
+  $('#recordBtn').disabled = $('#spinBtn').disabled;
+}
+document.addEventListener('click', ev => {
+  const b = ev.target.closest('[data-vid]');
+  const job = b && b.closest('.vid-line') && b.closest('.vid-line')._job;
+  if (!job) return;
+  const act = b.dataset.vid;
+  if (act === 'again' && job.blob) download(job.name, job.blob);
+  else if (act === 'retry' && job.rec && (job.state === 'failed' || job.state === 'cancelled')) { job.state = 'waiting'; renderVideoUI(); runVideoQueue(); }
+  else if (act === 'stop') {
+    if (job.state === 'waiting') job.state = 'cancelled';
+    else if (job.state === 'making') job.stop = true;
+    renderVideoUI();
+  }
+});
 $('#recordBtn').addEventListener('click', recordSpin);
-$('#wdVideoAgain').addEventListener('click', () => { if (videoJob && videoJob.blob) download(videoJob.name, videoJob.blob); });
-$('#wdVideoStop').addEventListener('click', () => { if (videoJob && videoJob.state === 'making') videoJob.stop = true; });
+// Leaving or reloading the page loses a video that isn't made yet: the browser asks first.
+window.addEventListener('beforeunload', ev => {
+  if (videoJobs.some(j => j.state === 'waiting' || j.state === 'making')) { ev.preventDefault(); ev.returnValue = ''; }
+});
 
 /** The text, shrunk (down to min px) and then cut with "…" so it fits maxW; sets x.font. */
 function fitVideoText(x, text, maxW, size, min) {
@@ -3134,6 +3229,32 @@ function fitVideoText(x, text, maxW, size, min) {
   let w = x.measureText(text).width;
   if (w > maxW) { fs = Math.max(min, Math.floor(fs * maxW / w)); x.font = `700 ${fs}px ${FONT}`; w = x.measureText(text).width; }
   return w > maxW ? truncateTo(text, maxW, x) : text;
+}
+/** The winner's name for the video card: one line as big as fits (132 px down to 72), else two lines split where
+    they balance best (72 down to 52), the second cut with "…" only if it still doesn't fit. { lines, fs } in px. */
+function videoNameLines(x, text, maxW, k) {
+  const fits = (str, fs) => { x.font = `700 ${fs}px ${FONT}`; return x.measureText(str).width <= maxW; };
+  for (const f of [132, 116, 100, 88, 78, 72]) if (fits(text, f * k)) return { lines: [text], fs: f * k };
+  const words = text.split(/\s+/).filter(Boolean);
+  const parts = words.length > 1 ? words : Array.from(text);
+  const join = arr => (words.length > 1 ? arr.join(' ') : arr.join(''));
+  for (const f of [72, 64, 58, 52]) {
+    const fs = f * k;
+    x.font = `700 ${fs}px ${FONT}`;
+    let best = null;
+    for (let i = 1; i < parts.length; i++) {
+      const a = join(parts.slice(0, i)), b = join(parts.slice(i));
+      const w = Math.max(x.measureText(a).width, x.measureText(b).width);
+      if (w <= maxW && (!best || w < best.w)) best = { w, lines: [a, b] };
+    }
+    if (best) return { lines: best.lines, fs };
+  }
+  const fs = 52 * k;
+  x.font = `700 ${fs}px ${FONT}`;
+  let i = parts.length - 1;
+  while (i > 1 && x.measureText(join(parts.slice(0, i))).width > maxW) i--;
+  const first = x.measureText(join(parts.slice(0, i))).width <= maxW ? join(parts.slice(0, i)) : truncateTo(join(parts.slice(0, i)), maxW, x);
+  return { lines: [first, truncateTo(join(parts.slice(i)), maxW, x) || join(parts.slice(i))], fs };
 }
 function roundRect(x, l, t, w, h, r) {
   x.beginPath();
@@ -3185,6 +3306,14 @@ async function makeSpinVideo(rec, entry, onProgress, shouldStop) {
   let bulbN = Math.round((TAU * rr) / Math.max(24, D * 0.078));
   bulbN = clamp(bulbN - (bulbN % 2), 16, 48);
   const bulbR = Math.max(2.2, rim * 0.19);
+  const sprite = (fill, alpha, glow) => {
+    const m = Math.ceil(bulbR + 12 * k), cv = mkCanvas(m * 2, m * 2), x = cv.getContext('2d');
+    x.globalAlpha = alpha; x.fillStyle = fill;
+    if (glow) { x.shadowColor = 'rgba(255,220,255,.9)'; x.shadowBlur = 8 * k; }
+    x.beginPath(); x.arc(m, m, bulbR, 0, TAU); x.fill();
+    return cv;
+  };
+  const bulbLit = sprite('#ffffff', 1, true), bulbChase = sprite('#d99bd9', 0.5, false), bulbIdle = sprite('#e7b3e7', 0.55, false);
 
   // 1) The timeline, frame by frame as the live spin does it: rotation, the pointer's spring, the rim-light chase,
   //    and when each tick sounds.
@@ -3280,10 +3409,15 @@ async function makeSpinVideo(rec, entry, onProgress, shouldStop) {
   const ptrHouse = new Path2D('M30 20.6 21.6 27.5v9.1h5.8v-5.5h5.2v5.5h5.8v-9.1z');
   const ptrW = D * 0.092, ptrH = D * 0.13, ptrL = cx - D * 0.046, ptrT = cy - D / 2 - D * 0.035;
 
-  const cardW = Math.round(1180 * k), cardH = Math.round(470 * k), band = Math.round(92 * k);
-  const card = mkCanvas(cardW, cardH), c = card.getContext('2d');
+  // The winner card, with its shadow, drawn once (cm: room for the shadow around it)
+  const cardW = Math.round(1180 * k), cardH = Math.round(520 * k), band = Math.round(92 * k), cm = Math.round(100 * k);
+  const card = mkCanvas(cardW + cm * 2, cardH + cm * 2), c = card.getContext('2d');
+  c.save();
+  c.shadowColor = 'rgba(0,0,0,.45)'; c.shadowBlur = 60 * k; c.shadowOffsetY = 20 * k;
+  roundRect(c, cm, cm, cardW, cardH, 36 * k); c.fillStyle = '#ffffff'; c.fill();
+  c.restore();
+  c.translate(cm, cm);
   roundRect(c, 0, 0, cardW, cardH, 36 * k); c.save(); c.clip();
-  c.fillStyle = '#ffffff'; c.fillRect(0, 0, cardW, cardH);
   const bandG = c.createLinearGradient(0, 0, cardW, 0);
   bandG.addColorStop(0, '#6e006e'); bandG.addColorStop(1, '#a308a3');
   c.fillStyle = bandG; c.fillRect(0, 0, cardW, band);
@@ -3297,9 +3431,11 @@ async function makeSpinVideo(rec, entry, onProgress, shouldStop) {
   const winner = String(entry.name || '').trim();
   c.direction = isRtl(winner) ? 'rtl' : 'ltr';
   c.fillStyle = '#6e006e';
-  c.fillText(fitVideoText(c, winner, cardW - 100 * k, 132 * k, 56 * k), cardW / 2, band + 228 * k);
+  const nm = videoNameLines(c, winner, cardW - 100 * k, k);
+  c.font = `700 ${nm.fs}px ${FONT}`;
+  nm.lines.forEach((ln, j) => c.fillText(ln, cardW / 2, band + 248 * k + (j - (nm.lines.length - 1) / 2) * nm.fs * 1.08));
   c.direction = 'ltr';
-  if (logo) { const lh = 64 * k, lw = lh * (logo.naturalWidth / logo.naturalHeight || 298 / 317); c.drawImage(logo, cardW / 2 - lw / 2, cardH - lh - 24 * k, lw, lh); }
+  if (logo) { const lh = 60 * k, lw = lh * (logo.naturalWidth / logo.naturalHeight || 298 / 317); c.drawImage(logo, cardW / 2 - lw / 2, cardH - lh - 22 * k, lw, lh); }
 
   // Confetti, as on screen (startConfetti) but seeded, from the moment the card appears.
   const rnd = seededRandom(n * 7919 + rec.round * 104729 + Math.round(rec.target * 1e6));
@@ -3327,24 +3463,26 @@ async function makeSpinVideo(rec, entry, onProgress, shouldStop) {
   // 4) Every frame: background, the turning wheel, spotlight, rim lights, hub, pointer, then the card and confetti.
   const finalRot = from + plan.delta;
   const win = segs[rec.winIdx];
+  // The winning segment's spotlight (as drawSpotlight): the rest dimmed, an outline glowing; drawn once, faded in.
+  const spotCv = mkCanvas(W, H);
+  if (win) {
+    const x = spotCv.getContext('2d');
+    x.translate(cx, cy);
+    const a0 = win.start + finalRot - Math.PI / 2, a1 = win.end + finalRot - Math.PI / 2;
+    if (n > 1) {
+      x.beginPath(); x.arc(0, 0, R + 1, 0, TAU); x.moveTo(0, 0); x.arc(0, 0, R + 1, a0, a1); x.closePath();
+      x.fillStyle = 'rgba(18,0,18,0.55)'; x.fill('evenodd');
+    }
+    x.beginPath();
+    if (n > 1) { x.moveTo(0, 0); x.arc(0, 0, Rs - 1, a0, a1); x.closePath(); } else x.arc(0, 0, Rs - 1, 0, TAU);
+    x.lineJoin = 'round'; x.strokeStyle = '#ffffff'; x.lineWidth = Math.max(3, D * 0.009);
+    x.shadowColor = 'rgba(255,170,255,0.95)'; x.shadowBlur = D * 0.04; x.stroke();
+  }
   const draw = (x, i) => {
     const t = i * dt;
     x.drawImage(bg, 0, 0);
     x.save(); x.translate(cx, cy); x.rotate(rotF[i]); x.drawImage(wheelCv, -D / 2, -D / 2, D, D); x.restore();
-    if (t >= tLand && win) { // the winning segment: the rest dimmed, an outline glowing (as drawSpotlight)
-      const a = clamp((t - tLand) / 0.35, 0, 1);
-      x.save(); x.globalAlpha = a; x.translate(cx, cy);
-      const a0 = win.start + finalRot - Math.PI / 2, a1 = win.end + finalRot - Math.PI / 2;
-      if (n > 1) {
-        x.beginPath(); x.arc(0, 0, R + 1, 0, TAU); x.moveTo(0, 0); x.arc(0, 0, R + 1, a0, a1); x.closePath();
-        x.fillStyle = 'rgba(18,0,18,0.55)'; x.fill('evenodd');
-      }
-      x.beginPath();
-      if (n > 1) { x.moveTo(0, 0); x.arc(0, 0, Rs - 1, a0, a1); x.closePath(); } else x.arc(0, 0, Rs - 1, 0, TAU);
-      x.lineJoin = 'round'; x.strokeStyle = '#ffffff'; x.lineWidth = Math.max(3, D * 0.009);
-      x.shadowColor = 'rgba(255,170,255,0.95)'; x.shadowBlur = D * 0.04; x.stroke();
-      x.restore();
-    }
+    if (t >= tLand && win) { x.save(); x.globalAlpha = clamp((t - tLand) / 0.35, 0, 1); x.drawImage(spotCv, 0, 0); x.restore(); }
     // Rim lights: twinkle at rest, chase while spinning, all flashing for 3.2 s after the landing.
     const mode = t >= tSpin && t < tLand ? 'chase' : t >= tLand && t < tLand + 3.2 ? 'party' : 'idle';
     const cstep = Math.floor(chaseF[i]);
@@ -3354,12 +3492,8 @@ async function makeSpinVideo(rec, entry, onProgress, shouldStop) {
       if (mode === 'chase') lit = mod(j - cstep, 3) === 0;
       else if (mode === 'party') lit = Math.floor((t - tLand) / 0.15) % 2 === 0;
       else lit = Math.floor((t + (j % 2 ? 0.7 : 0)) / 0.7) % 2 === 0;
-      x.save();
-      x.beginPath(); x.arc(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr, bulbR, 0, TAU);
-      if (lit) { x.fillStyle = '#ffffff'; x.shadowColor = 'rgba(255,220,255,.9)'; x.shadowBlur = 8 * k; }
-      else { x.globalAlpha = mode === 'chase' ? 0.5 : 0.55; x.fillStyle = mode === 'chase' ? '#d99bd9' : '#e7b3e7'; }
-      x.fill();
-      x.restore();
+      const sp = lit ? bulbLit : mode === 'chase' ? bulbChase : bulbIdle;
+      x.drawImage(sp, cx + Math.cos(a) * rr - sp.width / 2, cy + Math.sin(a) * rr - sp.height / 2);
     }
     x.drawImage(hubCv, cx - hubCv.width / 2, cy - hubCv.height / 2);
     // Pointer (its spring swings it as the segments pass)
@@ -3382,8 +3516,7 @@ async function makeSpinVideo(rec, entry, onProgress, shouldStop) {
       const sc = 0.9 + 0.1 * e;
       x.save(); x.globalAlpha = e;
       x.translate(W / 2, H / 2 + 20 * k); x.scale(sc, sc);
-      x.shadowColor = 'rgba(0,0,0,.45)'; x.shadowBlur = 60 * k; x.shadowOffsetY = 20 * k;
-      x.drawImage(card, -cardW / 2, -cardH / 2);
+      x.drawImage(card, -card.width / 2, -card.height / 2);
       x.restore();
       const el = t - tCard;
       if (parts.length && el < CONF) {
@@ -3406,7 +3539,7 @@ async function makeSpinVideo(rec, entry, onProgress, shouldStop) {
   };
 
   // 5) Encode (pausing while a live spin runs here, so it stays smooth), then write the MP4.
-  const v = await encodeH264(setup, frames, draw, { onProgress: p => onProgress(0.06 + 0.92 * p), shouldStop, shouldPause: () => spinning });
+  const v = await encodeH264(setup, frames, draw, { onProgress: p => onProgress(0.06 + 0.92 * p), shouldStop, shouldPause: () => spinning || !!confettiRaf });
   if (!v) return null;
   const bytes = mp4Mux({ video: { width: W, height: H, fps, description: v.description, samples: v.samples }, audio });
   onProgress(1);
@@ -3532,7 +3665,11 @@ function restorePendingWinner() {
   }
   winnerOpen = true;
   drawRound = rec.round;
-  currentWin = { rec, entryId: rec.entryId, redraw: p.redraw, marked: p.marked, restored: true, adopted: evAdoptedCard === p.logId };
+  currentWin = { rec, entryId: rec.entryId, redraw: p.redraw, marked: p.marked, restored: true, adopted: evAdoptedCard === p.logId, recorded: p.video || null };
+  // Its video was being made in the page that went away: say so (it can't be made again without that page's wheel).
+  if (p.video && !currentWin.adopted && !videoJobs.some(j => j.logId === rec.id)) {
+    videoJobs.push({ logId: rec.id, name: '', round: rec.round, redraw: p.redraw, state: 'lost', pct: 0, blob: null, stop: false });
+  }
   renderAll();
   openWinnerDialog(rec, { quiet: true });
   return true;
@@ -7118,7 +7255,8 @@ window.MAPDraw = Object.freeze({
       guestTarget: appMode === 'guest' ? (guestTarget ? guestTarget.name : null) : undefined,
       server: appMode === 'organiser' ? { ready: evSync.ready, epoch: evSync.epoch, version: evSync.version, bound: state.srv.id } : null,
       hold: evStepOpen && evHold ? { name: evHold.name, others: !!evHold.others, joined: !!evHold.joined } : null,
-      video: videoJob ? { state: videoJob.state, pct: videoJob.pct, name: videoJob.name, size: videoJob.blob ? videoJob.blob.size : 0 } : null
+      video: videoJobs.length ? (j => ({ state: j.state, pct: j.pct, name: j.name, size: j.blob ? j.blob.size : 0 }))(videoJobs[videoJobs.length - 1]) : null,
+      videos: videoJobs.map(j => ({ state: j.state, name: j.name, round: j.round, redraw: !!j.redraw }))
     };
   },
   pickWeightedIndex,
