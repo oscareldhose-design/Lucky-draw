@@ -188,7 +188,8 @@ button.
   videos also stay listed under the Record button (with **Download again**, **Cancel**, or **Try again**, which
   remakes the same draw's video, never a new draw). Videos are made one after another, so a **No-show — draw
   again** after a recorded draw gives both videos (`… round 3.mp4` and `… round 3 redraw.mp4`). If entries are
-  still open, Record offers **Close entries first**.
+  still open when you press Record, it first asks you to **Close entries** (a recording needs the wheel to stay
+  as it is), then **Spin and record**. A no-show redraw is recorded only while entries are still closed.
 - Leaving or reloading the page while a video is still being made asks first; a video that was cut off that way
   can't be made again, and its winner card says so.
 - 1920 × 1080 at 60 frames a second (30, or 1280 × 720, on browsers that can't do that), H.264, which every LED

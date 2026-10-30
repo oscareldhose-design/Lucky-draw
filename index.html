@@ -1013,7 +1013,7 @@ body.event-mode .ev-chip { display: none; }
         </div>
         <p class="prize-display" id="prizeDisplay"></p>
         <button type="button" class="spin-btn" id="spinBtn" disabled>SPIN</button>
-        <button type="button" class="btn btn-secondary btn-lg record-btn" id="recordBtn" disabled title="Spin, and get an MP4 video of it for an LED screen"><svg class="ic ic-sm" aria-hidden="true"><use href="#i-rec"/></svg>Record spin (MP4)</button>
+        <button type="button" class="btn btn-secondary btn-lg record-btn" id="recordBtn" disabled title="Spin, and get an MP4 video of it for an LED screen (entries are closed first)"><svg class="ic ic-sm" aria-hidden="true"><use href="#i-rec"/></svg>Record spin (MP4)</button>
       </div>
       <div class="rec-jobs" id="recJobs" hidden></div>
       <button type="button" class="event-exit" id="eventExit" title="Exit event mode (Esc)"><svg class="ic ic-sm" aria-hidden="true"><use href="#i-minimize"/></svg><span class="ev-label">Exit event mode</span></button>
@@ -2609,7 +2609,7 @@ function spin(opts = {}) {
   if (winnerOpen) finishWinner(defaultWinnerAction());
   if (!evOn()) return spinNow(opts);
   // A no-show redraw that had to wait (see below), still recorded if its draw was
-  if (!opts.redraw && evRedraw) opts = { ...opts, redraw: evRedraw, ...(evRedraw.record && !opts.record ? { record: evRedraw.record } : {}) };
+  if (!opts.redraw && evRedraw) opts = { ...opts, redraw: evRedraw, ...(evRedraw.record && !opts.record && entriesClosed() ? { record: evRedraw.record } : {}) };
   const go = pick => {
     spinPrep = null;
     if (pick && pick.busy) {
@@ -3098,7 +3098,8 @@ async function encodeAac(buffer) {
 const VIDEO_INTRO = 1.2, VIDEO_OUTRO = 7;  // seconds of still wheel before the spin, and after it lands
 const videoName = rec => `${exportStem()} round ${rec.round}${rec.redraw ? ' redraw' : ''}.mp4`;
 const mkCanvas = (w, h) => (typeof OffscreenCanvas !== 'undefined' ? new OffscreenCanvas(w, h) : Object.assign(document.createElement('canvas'), { width: w, height: h }));
-/** "Record spin (MP4)": checks the browser can make video, offers to close entries first, then spins and records. */
+/** "Record spin (MP4)": checks the browser can make video; a recording needs a fixed wheel, so entries are closed
+    first ("Close entries"), then "Spin and record". */
 async function recordSpin() {
   if (isLocked() || othersDrawing() || !wheelEntries.length) return;
   const setup = await pickH264();
@@ -3106,24 +3107,24 @@ async function recordSpin() {
     toast('This browser can’t make videos.', { type: 'error', detail: 'Open this page in Google Chrome or Microsoft Edge on this laptop to record a spin.', timeout: 9000 });
     return;
   }
-  const say = 'The winner is drawn now, exactly like pressing SPIN, and you get an MP4 video of the wheel landing on them'
-    + ` (${setup.height}p) to give to the LED screen. It downloads by itself once it is made.`;
-  const open = !entriesClosed();
+  if (!entriesClosed()) {
+    const close = await askConfirm({
+      title: 'Close entries to record',
+      text: 'A recorded spin needs the wheel to stay as it is, so entries must be closed first: nobody else can join,'
+        + ' and everyone already on the wheel stays. You can reopen entries afterwards.',
+      ok: 'Close entries'
+    });
+    if (!close || isLocked()) return;
+    if (!(await setEntriesOpen(false))) return; // says itself why it couldn't
+  }
   const go = await askConfirm({
     title: 'Record this spin?',
-    text: say + (open ? ' Entries are still open: close them first so nobody joins after the video.' : ''),
-    ok: 'Spin and record',
-    extra: open ? { label: 'Close entries first', icon: 'lock', onClick: () => {
-      const st = confirmState;
-      setEntriesOpen(false).then(ok => {
-        if (confirmState !== st) return;
-        $('#cdExtraMsg').textContent = ok ? 'Entries closed — nobody else can join.' : 'Couldn’t close entries. Try again.';
-        if (ok) { $('#cdText').textContent = say; $('#cdExtraRow').hidden = true; $('#cdOk').focus(); }
-      });
-      return 'Closing entries…';
-    } } : null
+    text: 'Entries are closed. The winner is drawn now, exactly like pressing SPIN, and you get an MP4 video of the wheel'
+      + ` landing on them (${setup.height}p) to give to the LED screen. It downloads by itself once it is made.`,
+    ok: 'Spin and record'
   });
   if (!go || isLocked()) return;
+  if (!entriesClosed()) { toast('Entries were opened again, so nothing was recorded.', { type: 'error', detail: 'Press Record spin to close them and record.' }); return; }
   spin({ record: setup });
 }
 /** Queues the video of a recorded draw; videos are made one after another in the background, then downloaded. */
@@ -3737,8 +3738,11 @@ function finishWinner(action) {
   if (action === 'noshow') {
     if (activeEntries().length) {
       toast(`${rec.name} marked as a no-show. Drawing again for round ${rec.round}…`);
-      // A recorded draw's redraw is recorded too (the LED screen showed the first one), with the same video set-up.
-      spin({ redraw: { round: rec.round, prize: rec.prize }, ...(recorded ? { record: recorded } : {}) });
+      // A recorded draw's redraw is recorded too (the LED screen showed the first one), with the same video set-up,
+      // as long as entries are still closed (a recording needs a fixed wheel).
+      const record = recorded && entriesClosed() ? recorded : null;
+      if (recorded && !record) toast('Entries are open, so this redraw isn’t recorded.', { type: 'error', detail: 'Recording needs entries closed.' });
+      spin({ redraw: { round: rec.round, prize: rec.prize }, ...(record ? { record } : {}) });
     } else toast('No entries left on the wheel to draw again.', { type: 'error' });
   } else {
     setTimeout(() => { if (!winnerDialog.open && !signupOpen) $('#spinBtn').focus({ preventScroll: true }); }, 0);
