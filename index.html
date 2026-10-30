@@ -1074,7 +1074,7 @@ body.event-mode .ev-chip { display: none; }
         </form>
 
         <details class="card" id="bulkCard">
-          <summary>Bulk add &amp; CSV import</summary>
+          <summary>Bulk add &amp; import (Excel or CSV)</summary>
           <div class="field">
             <label for="bulkText">Paste one per line: Name, Phone number, Email</label>
             <textarea class="textarea" id="bulkText" rows="5" spellcheck="false" placeholder="Priya Sharma, 07700 900123, priya@example.com&#10;Tom Whitaker, 07700 900456, tom@example.com"></textarea>
@@ -1082,7 +1082,7 @@ body.event-mode .ev-chip { display: none; }
           <p class="card-note">Every line needs a name, phone number and email. Lines missing any of them, or with an invalid number or email, are skipped and reported. Comma or tab separated, so you can paste straight from Excel or Google Sheets. An optional 4th column sets tickets.</p>
           <div class="btn-row">
             <button type="button" class="btn btn-primary" id="bulkAdd">Add these</button>
-            <label class="btn btn-secondary file-btn"><svg class="ic ic-sm" aria-hidden="true"><use href="#i-upload"/></svg>Import CSV<input type="file" id="csvFile" accept=".csv,.txt,.tsv,text/csv,text/plain"></label>
+            <label class="btn btn-secondary file-btn"><svg class="ic ic-sm" aria-hidden="true"><use href="#i-upload"/></svg>Import Excel or CSV<input type="file" id="csvFile" accept=".xlsx,.csv,.txt,.tsv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv,text/plain"></label>
             <button type="button" class="btn btn-ghost" id="csvTemplate"><svg class="ic ic-sm" aria-hidden="true"><use href="#i-download"/></svg>CSV template</button>
           </div>
           <p class="form-msg" id="bulkMsg" role="status"></p>
@@ -3993,6 +3993,95 @@ function rowsToRecords(rows) {
     return { name, number: get(r, 'number'), email: get(r, 'email'), weight: get(r, 'weight') };
   });
 }
+/* ---- Excel (.xlsx) import: an .xlsx file is a ZIP of XML files; the browser's own DecompressionStream inflates it */
+/** The files inside a ZIP: Map name -> { method, csize, lho } (central directory; no ZIP64, none needed here). */
+function zipDirectory(buf) {
+  const u8 = new Uint8Array(buf), dv = new DataView(buf);
+  let eocd = -1;
+  for (let i = u8.length - 22; i >= Math.max(0, u8.length - 65557); i--) if (dv.getUint32(i, true) === 0x06054b50) { eocd = i; break; }
+  if (eocd < 0) throw new Error('not a zip');
+  const count = dv.getUint16(eocd + 10, true);
+  const files = new Map();
+  let p = dv.getUint32(eocd + 16, true);
+  for (let i = 0; i < count; i++) {
+    if (p + 46 > u8.length || dv.getUint32(p, true) !== 0x02014b50) throw new Error('bad zip');
+    const nlen = dv.getUint16(p + 28, true);
+    const name = new TextDecoder().decode(u8.subarray(p + 46, p + 46 + nlen));
+    files.set(name, { method: dv.getUint16(p + 10, true), csize: dv.getUint32(p + 20, true), lho: dv.getUint32(p + 42, true) });
+    p += 46 + nlen + dv.getUint16(p + 30, true) + dv.getUint16(p + 32, true);
+  }
+  return { u8, dv, files };
+}
+/** One file from the ZIP as text (null if it isn't there). */
+async function zipText(z, name) {
+  const f = z.files.get(name);
+  if (!f) return null;
+  const at = f.lho + 30 + z.dv.getUint16(f.lho + 26, true) + z.dv.getUint16(f.lho + 28, true);
+  const data = z.u8.subarray(at, at + f.csize);
+  if (f.method === 0) return new TextDecoder().decode(data);
+  if (f.method !== 8 || typeof DecompressionStream === 'undefined') throw new Error('unsupported compression');
+  const out = await new Response(new Blob([data]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).arrayBuffer();
+  return new TextDecoder().decode(out);
+}
+/**
+ * The rows (arrays of text) of an Excel workbook's first sheet that has any data. Shared and inline text, numbers
+ * (a whole number exactly as typed; a 10-digit one, which is how Excel stores a UK phone number typed as a number,
+ * gets its leading 0 back) and TRUE/FALSE. Rows above the header row (a title, a blank line) are left out.
+ */
+async function readXlsxRows(buf) {
+  const z = zipDirectory(buf);
+  const xml = async name => { const t = await zipText(z, name); return t == null ? null : new DOMParser().parseFromString(t, 'application/xml'); };
+  const all = (node, tag) => Array.from(node.getElementsByTagNameNS('*', tag));
+  // A rich-text cell's runs joined; phonetic guides (rPh) left out
+  const textOf = node => all(node, 't').filter(t => t.parentNode.localName !== 'rPh').map(t => t.textContent).join('');
+  const shared = [];
+  const ss = await xml('xl/sharedStrings.xml');
+  if (ss) for (const si of all(ss, 'si')) shared.push(textOf(si));
+  // The sheets in workbook order, through the workbook's relationships
+  const wb = await xml('xl/workbook.xml');
+  const rels = await xml('xl/_rels/workbook.xml.rels');
+  const target = {};
+  if (rels) for (const r of all(rels, 'Relationship')) target[r.getAttribute('Id')] = r.getAttribute('Target') || '';
+  let paths = wb ? all(wb, 'sheet').map(sh => {
+    const rid = sh.getAttribute('r:id') || Array.from(sh.attributes).find(a => a.localName === 'id' && a.name !== 'sheetId')?.value;
+    const t = target[rid] || '';
+    return t.startsWith('/') ? t.slice(1) : 'xl/' + t.replace(/^\.\//, '');
+  }) : [];
+  if (!paths.length) paths = Array.from(z.files.keys()).filter(n => /^xl\/worksheets\/[^/]+\.xml$/.test(n)).sort();
+  const colOf = ref => { let n = 0; for (const ch of String(ref).replace(/[0-9$]/g, '').toUpperCase()) n = n * 26 + ch.charCodeAt(0) - 64; return n - 1; };
+  for (const path of paths) {
+    const sheet = await xml(path);
+    if (!sheet) continue;
+    const rows = [];
+    for (const row of all(sheet, 'row')) {
+      const out = [];
+      let next = 0;
+      for (const c of all(row, 'c')) {
+        const col = c.getAttribute('r') ? colOf(c.getAttribute('r')) : next;
+        next = col + 1;
+        const type = c.getAttribute('t') || 'n';
+        const v = all(c, 'v')[0];
+        let val = '';
+        if (type === 's') val = shared[parseInt(v && v.textContent, 10)] || '';
+        else if (type === 'inlineStr') { const is = all(c, 'is')[0]; val = is ? textOf(is) : ''; }
+        else if (type === 'b') val = v && v.textContent === '1' ? 'TRUE' : 'FALSE';
+        else val = v ? v.textContent : '';
+        if (type === 'n' && val !== '') {
+          const num = Number(val);
+          if (Number.isFinite(num) && Math.abs(num) < 1e15 && Math.abs(num - Math.round(num)) < 1e-6) val = String(Math.round(num));
+          if (/^[1-9]\d{9}$/.test(val)) val = '0' + val; // 07700 900123 typed as a number
+        }
+        if (col >= 0 && col < 200) out[col] = val;
+      }
+      rows.push(Array.from(out, x => (x == null ? '' : x)));
+    }
+    const filled = rows.filter(r => r.some(x => String(x).trim() !== ''));
+    if (!filled.length) continue;
+    const head = filled.slice(0, 10).findIndex(r => r.filter(headerKey).length >= 2);
+    return head > 0 ? filled.slice(head) : filled;
+  }
+  return [];
+}
 /* Why a bulk / CSV row was skipped, in the order they are reported ("Skipped 3: 2 missing a phone number, 1 invalid email"). */
 const SKIP_REASONS = [
   ['noName', n => `${n} missing a name`],
@@ -4045,14 +4134,23 @@ $('#bulkAdd').addEventListener('click', () => {
 $('#csvFile').addEventListener('change', async ev => {
   const file = ev.target.files && ev.target.files[0];
   if (!file) return;
+  const excel = /\.xlsx$/i.test(file.name);
   try {
     if (file.size > 10 * 1024 * 1024) throw new Error('too big');
-    const text = await file.text();
-    const res = importRecords(rowsToRecords(parseCSV(text)), 'import');
+    if (/\.xls$/i.test(file.name)) {
+      $('#bulkMsg').textContent = `${file.name} is an old-style Excel file. In Excel choose File → Save As → Excel Workbook (.xlsx), then import that.`;
+      ev.target.value = '';
+      return;
+    }
+    const buf = await file.arrayBuffer();
+    const zipped = new Uint8Array(buf, 0, Math.min(2, buf.byteLength));
+    const rows = excel || (zipped[0] === 0x50 && zipped[1] === 0x4b) ? await readXlsxRows(buf) : parseCSV(new TextDecoder().decode(buf));
+    const res = importRecords(rowsToRecords(rows), 'import');
     $('#bulkMsg').textContent = `${file.name}: ${res.text}`;
     toast(`${file.name}: ${res.text}`);
   } catch (e) {
-    $('#bulkMsg').textContent = `Couldn’t read ${file.name}. Save it as CSV (UTF-8) and try again.`;
+    $('#bulkMsg').textContent = excel ? `Couldn’t read ${file.name}. Check it opens in Excel, or save it as CSV (UTF-8) and import that.`
+      : `Couldn’t read ${file.name}. Save it as CSV (UTF-8) or Excel (.xlsx) and try again.`;
   }
   ev.target.value = '';
 });

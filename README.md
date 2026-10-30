@@ -107,9 +107,12 @@ button.
 - **Bulk add:** paste one person per line as `Name, Phone number, Email`, optionally with a fourth
   column for tickets. Commas and tabs both work, so you can paste straight from Excel or Google
   Sheets.
-- **Import CSV:** header rows such as *Name / First name + Last name*, *Phone / Mobile* and
-  *Email address* are recognised. Use **CSV template** for a ready-made file.
-- **Bulk paste and CSV import** follow the same rule as the forms: every row needs a name, a valid
+- **Import Excel or CSV** (Entries tab → *Bulk add & import*): an Excel workbook (.xlsx, its first sheet with
+  data) or a CSV file. Header rows such as *Name / First name + Last name*, *Phone / Mobile / Phone number* and
+  *Email address* are recognised (a title above the header row is skipped), so the app's own Excel download can be
+  imported back. Phone numbers Excel stored as numbers get their leading 0 back. Old .xls files: save them as
+  .xlsx first. Use **CSV template** for a ready-made file.
+- **Bulk paste and imports** follow the same rule as the forms: every row needs a name, a valid
   phone number and a valid email. Other rows are skipped, and the report says why, for example
   *"Added 40, skipped 3: 2 missing a phone number, 1 invalid email."*
 - **Up to 2,000 people:** the wheel holds at most 2,000 entries at once. Extra imports, sign-ups and
